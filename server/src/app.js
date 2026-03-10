@@ -14,6 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api', routes);
 
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.get('/health', (req, res) => {
   res
   .status(200)
