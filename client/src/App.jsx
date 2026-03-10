@@ -1,6 +1,9 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
+import AuthWrapper from './components/auth/AuthWrapper';
+
+import Home from './pages/Home';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Dashboard from './pages/dashboard/Dashboard';
@@ -17,21 +20,26 @@ const App = () => {
   return (
     <Router>
       <Routes>
+        <Route path="/" element={<Home />} />
+
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        <Route path="/" element={<Dashboard />} />
+        <Route element={<AuthWrapper />}>
+          <Route path="/dashboard" element={<Dashboard />} />
 
-        <Route path="/documents" element={<DocumentList />} />
-        <Route path="/documents/:id" element={<DocumentDetails />} />
+          <Route path="/documents" element={<DocumentList />} />
+          <Route path="/documents/:id" element={<DocumentDetails />} />
+          
+          <Route path="/flashcards" element={<FlashcardList />} />
+          <Route path="/flashcards/:id" element={<Flashcard />} />
+          
+          <Route path="/quiz/:id" element={<QuizTake />} />
+          <Route path="/quiz/:id/result" element={<QuizResult />} />
+          
+          <Route path="/profile" element={<Profile />} />
+        </Route>
 
-        <Route path="/flashcards" element={<FlashcardList />} />
-        <Route path="/flashcards/:id" element={<Flashcard />} />
-
-        <Route path="/quiz/:id" element={<QuizTake />} />
-        <Route path="/quiz/:id/result" element={<QuizResult />} />
-
-        <Route path="/profile" element={<Profile />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
