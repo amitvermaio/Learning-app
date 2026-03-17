@@ -6,8 +6,8 @@ import {
   deleteDocument,
   updateDocument,
 } from '../controllers/document.controller.js';
-import { authenticate } from '../middlewares/auth.middleware.js';
-import upload from '../config/multer.js';
+import authenticate from '../middlewares/auth.middleware.js';
+import upload from '../config/multer.js';``
 const router = Router();
 
 router.use(authenticate);

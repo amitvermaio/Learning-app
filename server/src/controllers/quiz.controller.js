@@ -1,6 +1,6 @@
 import Quiz from '../models/quiz.model.js';
-import {ApiResponse} from '../utils/ApiResponse.js';
 import AppError from '../utils/AppError.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
 
 // @desc Get All quizzes for a document
 export const getQuizzes = async (req, res, next) => {
@@ -9,7 +9,7 @@ export const getQuizzes = async (req, res, next) => {
       user: req.user.id,
       documentId: req.params.documentId
     }).populate('documentId', 'title fileName').sort({ createdAt: -1 });
-    
+
     res.status(200).json(new ApiResponse(200, quizzes, 'Quizzes fetched successfully'));
   } catch (error) {
     next(error);
@@ -33,8 +33,8 @@ export const submitQuiz = async (req, res, next) => {
     if (!Array.isArray(answers) || answers.length === 0) {
       throw new AppError('Invalid answers format', 400);
     }
-    
-    const quiz = await Quiz.findOne({_id: req.params.id, user: req.user.id});
+
+    const quiz = await Quiz.findOne({ _id: req.params.id, user: req.user.id });
     if (!quiz) {
       throw new AppError('Quiz not found', 404);
     }
@@ -43,20 +43,20 @@ export const submitQuiz = async (req, res, next) => {
       throw new AppError('Quiz already completed', 400);
     }
 
-    let correctedAnswers = 0;
+    let correctCount = 0;
     const userAnswers = [];
 
     answers.forEach(answer => {
-      const {questionIndex, selectedAnswer} = answer;
+      const { questionIndex, selectedAnswer } = answer;
 
       if (questionIndex < quiz.questions.length) {
         const question = quiz.questions[questionIndex];
         const isCorrect = question.correctAnswer === selectedAnswer;
-        
+
         if (isCorrect) {
-          correctedAnswers++;
+          correctCount++;
         }
-        
+
         userAnswers.push({
           questionIndex,
           selectedAnswer,
@@ -66,14 +66,25 @@ export const submitQuiz = async (req, res, next) => {
       }
     });
 
-    const score = Math.round((correctedAnswers / quiz.questions.length) * 100);
+    const score = Math.round((correctCount / quiz.questions.length) * 100);
 
     quiz.userAnswers = userAnswers;
     quiz.score = score;
     quiz.completedAt = new Date();
     await quiz.save();
-    
-    res.status(200).json(new ApiResponse(200, quiz, 'Quiz submitted successfully'));
+
+    res.status(200).json(new ApiResponse(
+      200, 
+      {
+        quizId: quiz._id,
+        score,
+        correctCount,
+        totalQuestions: quiz.totalQuestions,
+        percentage: score,
+        userAnswers
+      }, 
+      'Quiz submitted successfully'
+    ));
   } catch (error) {
     next(error);
   }
@@ -83,8 +94,47 @@ export const submitQuiz = async (req, res, next) => {
 // @desc get quiz results
 export const getQuizResults = async (req, res, next) => {
   try {
-    const quiz = await Quiz.findById(req.params.id);
-    res.status(200).json(new ApiResponse(200, quiz, 'Quiz results fetched successfully'));
+    const quiz = await Quiz.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    }).populate('document', 'title');
+
+    if (!quiz) {
+      throw new AppError('Quiz not found', 404);
+    }
+
+    if (!quiz.completedAt) {
+      throw new AppError('Quiz not completed yet', 400);
+    }
+
+    const detailedResults = quiz.questions.map((question, index) => {
+      const userAnswer = quiz.userAnswers.find(a => a.questionIndex === index);
+      return {
+        questionIndex: index,
+        question: question.question,
+        options: question.options,
+        correctAnswer: question.correctAnswer,
+        selectedAnswer: userAnswer?.selectedAnswer || null,
+        isCorrect: userAnswer?.isCorrect || false,
+        explanation: question.explanation || null
+      };
+    });
+    
+    res.status(200).json(new ApiResponse(
+      200,
+      {
+        quiz: {
+          id: quiz._id,
+          title: quiz.document.title,
+          document: quiz.document,
+          score: quiz.score,
+          totalQuestions: quiz.totalQuestions,
+          percentage: quiz.score
+        },
+        results: detailedResults
+      },
+      'Quiz results fetched successfully'
+    ));
   } catch (error) {
     next(error);
   }
@@ -94,8 +144,22 @@ export const getQuizResults = async (req, res, next) => {
 // @desc delete quiz
 export const deleteQuiz = async (req, res, next) => {
   try {
-    const quiz = await Quiz.findByIdAndDelete(req.params.id);
-    res.status(200).json(new ApiResponse(200, quiz, 'Quiz deleted successfully'));
+    const quiz = await Quiz.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    });
+    
+    if (!quiz) {
+      throw new AppError('Quiz not found', 404);
+    }
+    
+    await quiz.deleteOne();
+    
+    res.status(200).json(new ApiResponse(
+      200, 
+      null, 
+      'Quiz deleted successfully'
+    ));
   } catch (error) {
     next(error);
   }

@@ -2,16 +2,25 @@ import multer from "multer";
 
 const storage = multer.memoryStorage();
 
+const allowedMimeTypes = [
+  "application/pdf",                                      // PDF
+  "application/msword",                                   // .doc
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+  "application/vnd.ms-powerpoint",                        // .ppt
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
+  "text/plain",                                           
+];
+
 const upload = multer({
   storage,
   limits: {
     fileSize: 20 * 1024 * 1024 // 20MB
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === "application/pdf") {
+    if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Only PDF files are allowed"));
+      cb(new Error("Unsupported file type"));
     }
   }
 });

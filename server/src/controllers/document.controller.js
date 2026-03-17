@@ -1,8 +1,6 @@
 import Document from '../models/document.model.js';
 import FlashCard from '../models/flashcard.model.js';
 import Quiz from '../models/quiz.model.js';
-import { extractTextFromPdf } from '../utils/pdfParser.js';
-import { chunkText } from '../utils/textChunker.js';
 import AppError from '../utils/AppError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import imagekit from '../config/imagekit.js';
@@ -75,24 +73,24 @@ export const uploadDocument = async (req, res, next) => {
       tags: ['pdf', 'document'],
     });
 
-    const extractedText = await extractTextFromPdf(fileBuffer);
-    if (!extractedText || extractedText.trim().length === 0) {
-      return next(new AppError('Could not extract text from PDF. The file may be scanned/image-based.', 400));
-    }
+    // const extractedText = await extractTextFromPdf(fileBuffer);
+    // if (!extractedText || extractedText.trim().length === 0) {
+    //   return next(new AppError('Could not extract text from PDF. The file may be scanned/image-based.', 400));
+    // }
 
-    // Chunk the extracted text
-    const chunks = chunkText(extractedText, { chunkSize: 1000, chunkOverlap: 200 });
+    // // Chunk the extracted text
+    // const chunks = chunkText(extractedText, { chunkSize: 1000, chunkOverlap: 200 });
 
-    const document = await Document.create({
-      user: userId,
-      title,
-      fileName: originalName,
-      fileUrl: uploadResponse.url,
-      fileId: uploadResponse.fileId, 
-      fileSize: req.file.size,
-      totalChunks: chunks.length,
-      status: 'processing',
-    });
+    // const document = await Document.create({
+    //   user: userId,
+    //   title,
+    //   fileName: originalName,
+    //   fileUrl: uploadResponse.url,
+    //   fileId: uploadResponse.fileId, 
+    //   fileSize: req.file.size,
+    //   totalChunks: chunks.length,
+    //   status: 'processing',
+    // });
 
     try {
       await storeChunksInPinecone(chunks, document._id, userId);

@@ -1,7 +1,6 @@
 import Document from '../models/document.model.js';
 import Flashcard from '../models/flashcard.model.js';
 import Chat from '../models/chat.model.js';
-import User from '../models/user.model.js';
 import AppError from '../utils/AppError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 
@@ -222,7 +221,7 @@ export const getChatHistory = async (req, res, next) => {
       return next(new AppError('Document ID is required', 400));
     }
     
-    const chathistory = await ChatHistory.findOne({document: documentId, user: req.user.id});
+    const chathistory = await Chat.findOne({document: documentId, user: req.user.id});
     if (!chathistory) {
       return new ApiResponse(200, [], 'No chat history found');
     }
