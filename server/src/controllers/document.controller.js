@@ -1,55 +1,102 @@
+import config from '../config/config.js';
 import Document from '../models/document.model.js';
 import FlashCard from '../models/flashcard.model.js';
 import Quiz from '../models/quiz.model.js';
 import AppError from '../utils/AppError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
-import imagekit from '../config/imagekit.js';
+import { uploadToAzureBlob } from '../utils/azureBlob.js';
 import { pineconeIndex } from '../config/pinecone.js';
 import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
-import config from '../config/config.js';
+import { PineconeStore } from '@langchain/pinecone';
+import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
+import { PPTXLoader } from "@langchain/community/document_loaders/fs/pptx";
+import { TextLoader } from "@langchain/classic/document_loaders/fs/text";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import { Blob } from 'buffer';
 
 const embeddings = new GoogleGenerativeAIEmbeddings({
   apiKey: config.googleApiKey,
-  modelName: 'embedding-001',
+  modelName: 'gemini-embedding-001',
 });
 
-/**
- * Helper: Generate embeddings for chunks and upsert them into Pinecone.
- * Each vector is stored with metadata: userId, documentId, chunkIndex, and the text content.
- */
 const storeChunksInPinecone = async (chunks, documentId, userId) => {
-  const texts = chunks.map((c) => c.content);
-  const vectors = await embeddings.embedDocuments(texts);
-
-  const pineconeVectors = vectors.map((values, i) => ({
-    id: `${documentId}_chunk_${i}`,
-    values,
+  const docsWithMetadata = chunks.map((chunk, i) => ({
+    ...chunk,
     metadata: {
+      ...chunk.metadata,
       userId: userId.toString(),
       documentId: documentId.toString(),
       chunkIndex: i,
-      content: texts[i].slice(0, 1000), // Pinecone metadata limit ~40KB; keep it safe
     },
   }));
 
-  // Upsert in batches of 100 (Pinecone best practice)
-  const BATCH_SIZE = 100;
-  for (let i = 0; i < pineconeVectors.length; i += BATCH_SIZE) {
-    const batch = pineconeVectors.slice(i, i + BATCH_SIZE);
-    await pineconeIndex.upsert(batch);
-  }
+  await PineconeStore.fromDocuments(docsWithMetadata, embeddings, {
+    pineconeIndex,
+    namespace: userId.toString(),   // each user gets their own namespace
+    maxConcurrency: 5,
+  });
 };
 
 
-const deleteDocumentFromPinecone = async (documentId, totalChunks) => {
-  const ids = Array.from({ length: totalChunks }, (_, i) => `${documentId}_chunk_${i}`);
+const deleteDocumentFromPinecone = async (documentId, totalChunks, userId) => {
+  const ids = Array.from(
+    { length: totalChunks },
+    (_, i) => `${documentId}_chunk_${i}`
+  );
 
   const BATCH_SIZE = 100;
   for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-    const batch = ids.slice(i, i + BATCH_SIZE);
-    await pineconeIndex.deleteMany(batch);
+    await pineconeIndex.namespace(userId.toString()).deleteMany(ids.slice(i, i + BATCH_SIZE));  // 👈
   }
 };
+
+const extractAndChunkDocument = async (fileBuffer, mimeType) => {
+  const blob = new Blob([fileBuffer], { type: mimeType });
+
+  let loader;
+
+  switch (mimeType) {
+    case 'application/pdf':
+      loader = new PDFLoader(blob);
+      break;
+
+    case 'application/msword':
+    case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+      loader = new DocxLoader(blob);
+      break;
+
+    case 'application/vnd.ms-powerpoint':
+    case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+      loader = new PPTXLoader(blob);
+      break;
+
+    case 'text/plain':
+      loader = new TextLoader(blob);
+      break;
+
+    default:
+      throw new AppError('Unsupported file type for text extraction', 400);
+  }
+
+  const rawDocs = await loader.load();
+
+  if (!rawDocs || rawDocs.length === 0) {
+    throw new AppError(
+      'Could not extract text from the file. It may be scanned/image-based.',
+      400
+    );
+  }
+
+  const splitter = new RecursiveCharacterTextSplitter({
+    chunkSize: 1000,
+    chunkOverlap: 200,
+  });
+
+  const chunks = await splitter.splitDocuments(rawDocs);
+  return chunks;
+};
+
 
 export const uploadDocument = async (req, res, next) => {
   try {
@@ -62,36 +109,43 @@ export const uploadDocument = async (req, res, next) => {
       return next(new AppError('Document title is required', 400));
     }
 
-    const userId = req.user._id;
+    const userId = req.user.id;
     const fileBuffer = req.file.buffer;
     const originalName = req.file.originalname;
 
-    const uploadResponse = await imagekit.upload({
-      file: fileBuffer,
-      fileName: originalName,
-      folder: `/documents/${userId}`,
-      tags: ['pdf', 'document'],
+    // 1. Upload raw file to Azure Blob
+    const uploadResponse = await uploadToAzureBlob({
+      buffer: fileBuffer,
+      mimeType: req.file.mimetype,
+      originalName,
     });
 
-    // const extractedText = await extractTextFromPdf(fileBuffer);
-    // if (!extractedText || extractedText.trim().length === 0) {
-    //   return next(new AppError('Could not extract text from PDF. The file may be scanned/image-based.', 400));
-    // }
+    // 2. Extract text + chunk using LangChain 
+    const chunks = await extractAndChunkDocument(fileBuffer, req.file.mimetype);
 
-    // // Chunk the extracted text
-    // const chunks = chunkText(extractedText, { chunkSize: 1000, chunkOverlap: 200 });
+    if (!chunks || chunks.length === 0) {
+      return next(
+        new AppError(
+          'Could not extract text from the file. It may be scanned/image-based.',
+          400
+        )
+      );
+    }
 
-    // const document = await Document.create({
-    //   user: userId,
-    //   title,
-    //   fileName: originalName,
-    //   fileUrl: uploadResponse.url,
-    //   fileId: uploadResponse.fileId, 
-    //   fileSize: req.file.size,
-    //   totalChunks: chunks.length,
-    //   status: 'processing',
-    // });
+    // 3. Save document to MongoDB 
+    const document = await Document.create({
+      user: userId,
+      title,
+      fileName: originalName,
+      fileUrl: uploadResponse.url,
+      fileId: uploadResponse.fileId,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype, 
+      totalChunks: chunks.length,
+      status: 'processing',
+    });
 
+    // 4. Store chunks in Pinecone
     try {
       await storeChunksInPinecone(chunks, document._id, userId);
       document.status = 'ready';
@@ -99,31 +153,36 @@ export const uploadDocument = async (req, res, next) => {
       console.error('Embedding error:', embeddingError.message);
       document.status = 'failed';
     }
+
     await document.save();
 
     res.status(201).json(
-      new ApiResponse(201, {
-        document: {
-          _id: document._id,
-          title: document.title,
-          fileName: document.fileName,
-          fileUrl: document.fileUrl,
-          fileSize: document.fileSize,
-          status: document.status,
-          totalChunks: chunks.length,
-          uploadDate: document.uploadDate,
+      new ApiResponse(
+        201,
+        {
+          document: {
+            _id: document._id,
+            title: document.title,
+            fileName: document.fileName,
+            fileUrl: document.fileUrl,
+            fileSize: document.fileSize,
+            status: document.status,
+            totalChunks: chunks.length,
+            uploadDate: document.uploadDate,
+          },
         },
-      }, 'Document uploaded and processed successfully')
+        'Document uploaded and processed successfully'
+      )
     );
   } catch (error) {
     next(error);
   }
 };
 
+
 export const getDocuments = async (req, res, next) => {
   try {
-    const documents = await Document.find({ user: req.user._id })
-      .sort({ uploadDate: -1 });
+    const documents = await Document.find({ user: req.user.id }).sort({ uploadDate: -1 });
 
     res.status(200).json(
       new ApiResponse(200, { documents }, 'Documents fetched successfully')
@@ -132,6 +191,7 @@ export const getDocuments = async (req, res, next) => {
     next(error);
   }
 };
+
 
 export const getDocumentById = async (req, res, next) => {
   try {
@@ -155,6 +215,7 @@ export const getDocumentById = async (req, res, next) => {
   }
 };
 
+
 export const deleteDocument = async (req, res, next) => {
   try {
     const document = await Document.findOne({
@@ -168,16 +229,15 @@ export const deleteDocument = async (req, res, next) => {
 
     if (document.fileId) {
       try {
-        await imagekit.deleteFile(document.fileId);
-      } catch (ikError) {
-        console.error('ImageKit deletion error:', ikError.message);
+        await uploadToAzureBlob.deleteFile(document.fileId);
+      } catch (azureError) {
+        console.error('Azure Blob deletion error:', azureError.message);
       }
     }
 
-    // Delete vectors from Pinecone
     if (document.totalChunks > 0) {
       try {
-        await deleteDocumentFromPinecone(document._id, document.totalChunks);
+        await deleteDocumentFromPinecone(document._id, document.totalChunks, req.user.id);
       } catch (pcError) {
         console.error('Pinecone deletion error:', pcError.message);
       }
@@ -197,6 +257,7 @@ export const deleteDocument = async (req, res, next) => {
     next(error);
   }
 };
+
 
 export const updateDocument = async (req, res, next) => {
   try {

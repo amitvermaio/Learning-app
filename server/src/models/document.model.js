@@ -7,6 +7,7 @@ const documentSchema = new mongoose.Schema({
   fileUrl: { type: String, required: true },
   fileId: { type: String, default: '' },
   fileSize: { type: Number, required: true },
+  mimeType: { type: String, required: true },   
   totalChunks: { type: Number, default: 0 },
   uploadDate: { type: Date, default: Date.now },
   lastAccessed: { type: Date, default: Date.now },
