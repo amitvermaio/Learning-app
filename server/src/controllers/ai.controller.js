@@ -1,40 +1,45 @@
 import Document from '../models/document.model.js';
 import Flashcard from '../models/flashcard.model.js';
 import Chat from '../models/chat.model.js';
+import Quiz from '../models/quiz.model.js';
 import AppError from '../utils/AppError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
+import { getRelevantChunks, buildContext, runChain } from '../services/ai.service.js';
 
 // @desc Generate Flashcard from document
 export const generateFlashcards = async (req, res, next) => {
   try {
     const { documentId, count = 10 } = req.body;
 
-    if (!documentId) {
-      return next(new AppError('Document ID is required', 400));
-    }
+    
+    const document = await Document.findOne({
+      _id: documentId,
+      user: req.user.id,
+      status: 'ready',
+    });
 
-    if (count < 1 || count > 20) {
-      return next(new AppError('Count must be between 1 and 20', 400));
-    }
-
-    const document = await Document.findById(documentId);
     if (!document) {
       return next(new AppError('Document not found', 404));
     }
 
-    // Generate Flashcards using gemini
-    // const cards = await gemini.generateFlashcards(document.extractedText, parseInt(count));
 
-    const flashcardSet = await Flashcard.create({
-      user: req.user.id,
-      document: document._id,
-      cards: cards.map(card => ({
-        question: card.question,
-        answer: card.answer,
-        difficulty: card.difficulty,
-        reviewCount: 0,
-        isStarred: false
-      }))
+    const FLASHCARD_PROMPT = `
+      You are an expert tutor. Based on the document content below, generate exactly {count} flashcards.
+      Respond ONLY with a valid JSON array. No markdown, no explanation, no backticks.
+
+      Format:
+      [
+        {{ "question": "...", "answer": "...", "difficulty": "easy" | "medium" | "hard" }},
+        ...
+      ]
+
+      Document content:
+      {context}
+    `;
+
+    const raw = await runChain(FLASHCARD_PROMPT, {
+      count,
+      context: document.extractedText.slice(0, 12000) 
     })
 
     res.status(201).json(new ApiResponse(
@@ -52,9 +57,7 @@ export const generateQuiz = async (req, res, next) => {
   try {
     const { documentId, numQuestions, title } = req.body;
 
-    if (!documentId) {
-      return next(new AppError('Document ID is required', 400));
-    }
+    // Validation handled by express-validator middleware
 
     const document = await Document.findOne({
       _id: documentId,
@@ -97,9 +100,7 @@ export const generateQuiz = async (req, res, next) => {
 export const generateSummary = async (req, res, next) => {
   try {
     const { documentId } = req.body;
-    if (!documentId) {
-      return next(new AppError('Document ID is required', 400));
-    }
+    // Validation handled by express-validator middleware
     
     const document = await Document.findById(documentId);
     if (!document) {
@@ -123,9 +124,7 @@ export const generateSummary = async (req, res, next) => {
 export const chat = async (req, res, next) => {
   try {
     const {documentId, query} = req.body;
-    if (!documentId || !query) {
-      return next(new AppError('Document ID and query are required', 400));
-    }
+    // Validation handled by express-validator middleware
     
     const document = await Document.findById(documentId);
     if (!document) {
@@ -184,9 +183,7 @@ export const chat = async (req, res, next) => {
 export const explainConcept = async (req, res, next) => {
   try {
     const {documentId, concept} = req.body;
-    if (!documentId || !concept) {
-      return next(new AppError('Document ID and concept are required', 400));
-    }
+    // Validation handled by express-validator middleware
     
     const document = await Document.findById({_id: documentId, user: req.user.id, status: 'ready'});
     if (!document) {
@@ -217,9 +214,7 @@ export const explainConcept = async (req, res, next) => {
 export const getChatHistory = async (req, res, next) => {
   try {
     const {documentId} = req.params;
-    if (!documentId) {
-      return next(new AppError('Document ID is required', 400));
-    }
+    // Validation handled by express-validator middleware
     
     const chathistory = await Chat.findOne({document: documentId, user: req.user.id});
     if (!chathistory) {

@@ -9,6 +9,7 @@ const documentSchema = new mongoose.Schema({
   fileSize: { type: Number, required: true },
   mimeType: { type: String, required: true },   
   totalChunks: { type: Number, default: 0 },
+  extractedText: { type: String, default: '' },
   uploadDate: { type: Date, default: Date.now },
   lastAccessed: { type: Date, default: Date.now },
   status: { type: String, enum: ['processing', 'ready', 'failed'], default: 'processing' }

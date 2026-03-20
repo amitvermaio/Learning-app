@@ -40,3 +40,9 @@ export const uploadToAzureBlob = async ({ buffer, mimeType, originalName }) => {
     id: blobName,
   };
 };
+
+export const deleteFromAzureBlob = async (blobName) => {
+  const containerClient = resolveContainerClient();
+  const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+  await blockBlobClient.deleteIfExists();
+}

@@ -4,7 +4,7 @@ import FlashCard from '../models/flashcard.model.js';
 import Quiz from '../models/quiz.model.js';
 import AppError from '../utils/AppError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
-import { uploadToAzureBlob } from '../utils/azureBlob.js';
+import { uploadToAzureBlob, deleteFromAzureBlob } from '../utils/azureBlob.js';
 import { pineconeIndex } from '../config/pinecone.js';
 import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
 import { PineconeStore } from '@langchain/pinecone';
@@ -21,71 +21,64 @@ const embeddings = new GoogleGenerativeAIEmbeddings({
 });
 
 const storeChunksInPinecone = async (chunks, documentId, userId) => {
-  const docsWithMetadata = chunks.map((chunk, i) => ({
-    ...chunk,
-    metadata: {
-      ...chunk.metadata,
-      userId: userId.toString(),
-      documentId: documentId.toString(),
-      chunkIndex: i,
-    },
-  }));
+  const BATCH_SIZE = 90; // Gemini embedding limit is 100
 
-  await PineconeStore.fromDocuments(docsWithMetadata, embeddings, {
-    pineconeIndex,
-    namespace: userId.toString(),   // each user gets their own namespace
-    maxConcurrency: 5,
-  });
+  for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+    const batch = chunks.slice(i, i + BATCH_SIZE);
+
+    const texts = batch.map(chunk => chunk.pageContent);
+
+    const vectors = await embeddings.embedDocuments(texts);
+
+    // Pinecone upsert payload
+    const upsertPayload = batch.map((chunk, j) => ({
+      id: `${documentId}_chunk_${i + j}`,   
+      values: vectors[j],
+      metadata: {
+        ...chunk.metadata,
+        userId: userId.toString(),
+        documentId: documentId.toString(),
+        chunkIndex: i + j,
+        text: chunk.pageContent,
+      },
+    }));
+
+    await pineconeIndex.namespace(userId.toString()).upsert(upsertPayload);
+  }
 };
 
-
-const deleteDocumentFromPinecone = async (documentId, totalChunks, userId) => {
-  const ids = Array.from(
-    { length: totalChunks },
-    (_, i) => `${documentId}_chunk_${i}`
-  );
-
-  const BATCH_SIZE = 100;
-  for (let i = 0; i < ids.length; i += BATCH_SIZE) {
-    await pineconeIndex.namespace(userId.toString()).deleteMany(ids.slice(i, i + BATCH_SIZE));  // 👈
-  }
+const deleteDocumentFromPinecone = async (documentId, userId) => {
+  await pineconeIndex.namespace(userId.toString()).deleteMany({
+    filter: { documentId: { $eq: documentId.toString() } },
+  });
 };
 
 const extractAndChunkDocument = async (fileBuffer, mimeType) => {
   const blob = new Blob([fileBuffer], { type: mimeType });
 
   let loader;
-
   switch (mimeType) {
     case 'application/pdf':
       loader = new PDFLoader(blob);
       break;
-
     case 'application/msword':
     case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
       loader = new DocxLoader(blob);
       break;
-
     case 'application/vnd.ms-powerpoint':
     case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
       loader = new PPTXLoader(blob);
       break;
-
     case 'text/plain':
       loader = new TextLoader(blob);
       break;
-
     default:
       throw new AppError('Unsupported file type for text extraction', 400);
   }
 
   const rawDocs = await loader.load();
-
   if (!rawDocs || rawDocs.length === 0) {
-    throw new AppError(
-      'Could not extract text from the file. It may be scanned/image-based.',
-      400
-    );
+    throw new AppError('Could not extract text from the file. It may be scanned/image-based.', 400);
   }
 
   const splitter = new RecursiveCharacterTextSplitter({
@@ -94,45 +87,40 @@ const extractAndChunkDocument = async (fileBuffer, mimeType) => {
   });
 
   const chunks = await splitter.splitDocuments(rawDocs);
-  return chunks;
+  return { chunks, rawDocs };  // return rawDocs too so we can extract full text
 };
 
 
 export const uploadDocument = async (req, res, next) => {
   try {
-    if (!req.file) {
-      return next(new AppError('No file uploaded', 400));
-    }
+    if (!req.file) return next(new AppError('No file uploaded', 400));
 
     const { title } = req.body;
-    if (!title) {
-      return next(new AppError('Document title is required', 400));
-    }
+    if (!title) return next(new AppError('Document title is required', 400));
 
     const userId = req.user.id;
     const fileBuffer = req.file.buffer;
     const originalName = req.file.originalname;
 
-    // 1. Upload raw file to Azure Blob
+    // 1. Upload raw file to Azure 
     const uploadResponse = await uploadToAzureBlob({
       buffer: fileBuffer,
       mimeType: req.file.mimetype,
       originalName,
     });
 
-    // 2. Extract text + chunk using LangChain 
-    const chunks = await extractAndChunkDocument(fileBuffer, req.file.mimetype);
+    // 2. Extract text + chunk using LangChain
+    const { chunks, rawDocs } = await extractAndChunkDocument(fileBuffer, req.file.mimetype);
 
     if (!chunks || chunks.length === 0) {
-      return next(
-        new AppError(
-          'Could not extract text from the file. It may be scanned/image-based.',
-          400
-        )
-      );
+      return next(new AppError('Could not extract text from the file. It may be scanned/image-based.', 400));
     }
 
-    // 3. Save document to MongoDB 
+    // 3. Build full extracted text from rawDocs and save to MongoDB
+    // This is used later for flashcards, quiz, summary (no need to refetch from Azure)
+    const extractedText = rawDocs.map(d => d.pageContent).join('\n\n');
+
+    // 4. Save document to MongoDB
     const document = await Document.create({
       user: userId,
       title,
@@ -140,12 +128,13 @@ export const uploadDocument = async (req, res, next) => {
       fileUrl: uploadResponse.url,
       fileId: uploadResponse.fileId,
       fileSize: req.file.size,
-      mimeType: req.file.mimetype, 
+      mimeType: req.file.mimetype,
       totalChunks: chunks.length,
+      extractedText,              
       status: 'processing',
     });
 
-    // 4. Store chunks in Pinecone
+    // 5. Store chunks in Pinecone
     try {
       await storeChunksInPinecone(chunks, document._id, userId);
       document.status = 'ready';
@@ -182,11 +171,12 @@ export const uploadDocument = async (req, res, next) => {
 
 export const getDocuments = async (req, res, next) => {
   try {
-    const documents = await Document.find({ user: req.user.id }).sort({ uploadDate: -1 });
+    // exclude extractedText from list view — it's large and not needed here
+    const documents = await Document.find({ user: req.user.id })
+      .select('-extractedText')
+      .sort({ uploadDate: -1 });
 
-    res.status(200).json(
-      new ApiResponse(200, { documents }, 'Documents fetched successfully')
-    );
+    res.status(200).json(new ApiResponse(200, { documents }, 'Documents fetched successfully'));
   } catch (error) {
     next(error);
   }
@@ -195,21 +185,16 @@ export const getDocuments = async (req, res, next) => {
 
 export const getDocumentById = async (req, res, next) => {
   try {
-    const document = await Document.findOne({
-      _id: req.params.id,
-      user: req.user.id,
-    });
+    // exclude extractedText from single fetch too — frontend doesn't need raw text
+    const document = await Document.findOne({ _id: req.params.id, user: req.user.id })
+      .select('-extractedText');
 
-    if (!document) {
-      return next(new AppError('Document not found', 404));
-    }
+    if (!document) return next(new AppError('Document not found', 404));
 
     document.lastAccessed = new Date();
     await document.save();
 
-    res.status(200).json(
-      new ApiResponse(200, { document }, 'Document fetched successfully')
-    );
+    res.status(200).json(new ApiResponse(200, { document }, 'Document fetched successfully'));
   } catch (error) {
     next(error);
   }
@@ -218,36 +203,32 @@ export const getDocumentById = async (req, res, next) => {
 
 export const deleteDocument = async (req, res, next) => {
   try {
-    const document = await Document.findOne({
-      _id: req.params.id,
-      user: req.user.id,
-    });
+    const document = await Document.findOne({ _id: req.params.id, user: req.user.id });
+    if (!document) return next(new AppError('Document not found', 404));
 
-    if (!document) {
-      return next(new AppError('Document not found', 404));
-    }
-
+    // 1. Delete from Azure Blob
     if (document.fileId) {
       try {
-        await uploadToAzureBlob.deleteFile(document.fileId);
+        await deleteFromAzureBlob(document.fileId); // use named import, not uploadToAzureBlob.deleteFile
       } catch (azureError) {
         console.error('Azure Blob deletion error:', azureError.message);
       }
     }
 
-    if (document.totalChunks > 0) {
-      try {
-        await deleteDocumentFromPinecone(document._id, document.totalChunks, req.user.id);
-      } catch (pcError) {
-        console.error('Pinecone deletion error:', pcError.message);
-      }
+    // 2. Delete all vectors for this document from Pinecone by metadata filter
+    try {
+      await deleteDocumentFromPinecone(document._id, req.user.id);
+    } catch (pcError) {
+      console.error('Pinecone deletion error:', pcError.message);
     }
 
+    // 3. Delete related flashcards and quizzes
     await Promise.all([
       FlashCard.deleteMany({ document: document._id }),
       Quiz.deleteMany({ document: document._id }),
     ]);
 
+    // 4. Delete document record from MongoDB
     await Document.findByIdAndDelete(document._id);
 
     res.status(200).json(
@@ -262,23 +243,17 @@ export const deleteDocument = async (req, res, next) => {
 export const updateDocument = async (req, res, next) => {
   try {
     const { title } = req.body;
-    if (!title) {
-      return next(new AppError('Title is required', 400));
-    }
+    if (!title) return next(new AppError('Title is required', 400));
 
     const document = await Document.findOneAndUpdate(
       { _id: req.params.id, user: req.user.id },
       { title },
       { new: true, runValidators: true }
-    );
+    ).select('-extractedText');
 
-    if (!document) {
-      return next(new AppError('Document not found', 404));
-    }
+    if (!document) return next(new AppError('Document not found', 404));
 
-    res.status(200).json(
-      new ApiResponse(200, { document }, 'Document updated successfully')
-    );
+    res.status(200).json(new ApiResponse(200, { document }, 'Document updated successfully'));
   } catch (error) {
     next(error);
   }
