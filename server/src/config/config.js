@@ -4,7 +4,7 @@ import { config as dotenvConfig } from "dotenv";
 
 dotenvConfig();
 
-const _config = {
+const config = {
   port: process.env.PORT || 3000,
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   dbConnectionString: process.env.DB_CONNECTION_STRING || 'mongodb://127.0.0.1:27017/learning_platform',
@@ -17,4 +17,4 @@ const _config = {
   azureStorageContainerName: process.env.AZURE_STORAGE_CONTAINER_NAME,
 };
 
-export default _config;
+export default config;

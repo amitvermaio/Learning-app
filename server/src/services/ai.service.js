@@ -1,14 +1,42 @@
 import config from "../config/config.js";
-import { GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { GoogleGenAI } from "@google/genai";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { PromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
-import { RunnableSequence, RunnablePassthrough } from "@langchain/core/runnables";
+import { RunnableSequence } from "@langchain/core/runnables";
 import { pineconeIndex } from '../config/pinecone.js';
 
-export const embeddings = new GoogleGenerativeAIEmbeddings({
-  apiKey: config.googleApiKey,
-  model: "gemini-embedding-001",
-});
+const genAI = new GoogleGenAI({ apiKey: config.googleApiKey });
+
+export const embeddings = {
+  async embedDocuments(texts) {
+    const results = await Promise.all(
+      texts.map(text =>
+        genAI.models.embedContent({
+          model: "gemini-embedding-001",
+          contents: text,
+          config: {
+            taskType: "RETRIEVAL_DOCUMENT",
+            outputDimensionality: 768,
+          },
+        })
+      )
+    );
+    return results.map(r => r.embeddings[0].values);
+  },
+
+  async embedQuery(text) {
+    const result = await genAI.models.embedContent({
+      model: "gemini-embedding-001",
+      contents: text,
+      config: {
+        taskType: "RETRIEVAL_QUERY",
+        outputDimensionality: 768,
+      },
+    });
+    return result.embeddings[0].values;
+  }
+};
 
 export const llm = new ChatGoogleGenerativeAI({
   apiKey: config.googleApiKey,
@@ -23,7 +51,7 @@ export async function getRelevantChunks(userId, documentId, query, topK = 5) {
     vector: queryVector,
     topK,
     filter: {
-      documentId: { $eq: documentId },  
+      documentId: { $eq: documentId },
     },
     includeMetadata: true,
   });
@@ -32,7 +60,7 @@ export async function getRelevantChunks(userId, documentId, query, topK = 5) {
     text: match.metadata.text,
     chunkIndex: match.metadata.chunkIndex,
     score: match.score,
-  }))
+  }));
 }
 
 export function buildContext(chunks) {
@@ -41,6 +69,6 @@ export function buildContext(chunks) {
 
 export async function runChain(promptTemplate, variables) {
   const prompt = PromptTemplate.fromTemplate(promptTemplate);
-  const chain = new RunnableSequence.from([prompt, llm, new StringOutputParser()]);
+  const chain = RunnableSequence.from([prompt, llm, new StringOutputParser()]);
   return await chain.invoke(variables);
 }

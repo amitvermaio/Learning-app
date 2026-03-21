@@ -1,4 +1,3 @@
-import config from '../config/config.js';
 import Document from '../models/document.model.js';
 import FlashCard from '../models/flashcard.model.js';
 import Quiz from '../models/quiz.model.js';
@@ -6,40 +5,32 @@ import AppError from '../utils/AppError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { uploadToAzureBlob, deleteFromAzureBlob } from '../utils/azureBlob.js';
 import { pineconeIndex } from '../config/pinecone.js';
-import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
-import { PineconeStore } from '@langchain/pinecone';
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
 import { PPTXLoader } from "@langchain/community/document_loaders/fs/pptx";
 import { TextLoader } from "@langchain/classic/document_loaders/fs/text";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Blob } from 'buffer';
-
-const embeddings = new GoogleGenerativeAIEmbeddings({
-  apiKey: config.googleApiKey,
-  modelName: 'gemini-embedding-001',
-});
+import { embeddings } from '../services/ai.service.js';
 
 const storeChunksInPinecone = async (chunks, documentId, userId) => {
-  const BATCH_SIZE = 90; // Gemini embedding limit is 100
+  const BATCH_SIZE = 90;
 
   for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
     const batch = chunks.slice(i, i + BATCH_SIZE);
-
     const texts = batch.map(chunk => chunk.pageContent);
-
     const vectors = await embeddings.embedDocuments(texts);
 
-    // Pinecone upsert payload
     const upsertPayload = batch.map((chunk, j) => ({
-      id: `${documentId}_chunk_${i + j}`,   
+      id: `${documentId}_chunk_${i + j}`,
       values: vectors[j],
       metadata: {
-        ...chunk.metadata,
         userId: userId.toString(),
         documentId: documentId.toString(),
         chunkIndex: i + j,
         text: chunk.pageContent,
+        source: chunk.metadata?.source || '',
+        pageNumber: chunk.metadata?.pageNumber ?? chunk.metadata?.page ?? 0,
       },
     }));
 
@@ -130,7 +121,7 @@ export const uploadDocument = async (req, res, next) => {
       fileSize: req.file.size,
       mimeType: req.file.mimetype,
       totalChunks: chunks.length,
-      extractedText,              
+      extractedText,
       status: 'processing',
     });
 
@@ -139,7 +130,7 @@ export const uploadDocument = async (req, res, next) => {
       await storeChunksInPinecone(chunks, document._id, userId);
       document.status = 'ready';
     } catch (embeddingError) {
-      console.error('Embedding error:', embeddingError.message);
+      console.error('Embedding error:', embeddingError);
       document.status = 'failed';
     }
 

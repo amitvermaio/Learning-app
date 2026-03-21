@@ -74,7 +74,7 @@ export const generateFlashcards = async (req, res, next) => {
 // @desc Generate Quiz from document
 export const generateQuiz = async (req, res, next) => {
   try {
-    const { documentId, numQuestions = 10, title } = req.body;
+    const { documentId, numQuestions = 5, title } = req.body;
 
     const document = await Document.findOne({
       _id: documentId,

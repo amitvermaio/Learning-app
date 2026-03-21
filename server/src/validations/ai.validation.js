@@ -21,8 +21,7 @@ export const generateFlashcardsRules = [
 
 export const generateQuizRules = [
   body('documentId').notEmpty().withMessage('Document ID is required'),
-  body('numQuestions').notEmpty().withMessage('Number of questions is required'),
-  body('numQuestions').isInt({ min: 1 }).withMessage('Number of questions must be at least 1'),
+  body('numQuestions').optional().isInt({ min: 1, max: 10 }).withMessage('Number of questions must be between 1 and 10'),
   body('title').optional().isString(),
   validate,
 ];
