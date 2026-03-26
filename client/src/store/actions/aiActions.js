@@ -92,7 +92,6 @@ export const asyncgetchathistory = (documentId) => async (dispatch) => {
 		dispatch(setailoading());
 		const { data } = await api.get(`/ai/chat-history/${documentId}`);
 		dispatch(setaichathistory(extractdata(data) || []));
-		return true;
 	} catch (error) {
 		const message = error.response?.data?.message || 'Failed to fetch chat history';
 		dispatch(setaierror(message));

@@ -4,6 +4,9 @@ import { useSelector, useDispatch } from 'react-redux';
 import { asyncgetdocumentbyid } from '../../store/actions/documentActions';
 import Spinner from '../../components/common/Spinner';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
+import PageHeader from '../../components/common/PageHeader';
+import Tabs from '../../components/common/Tabs';
+import ChatInterface from '../../components/chat/ChatInterface';
 
 const DocumentDetails = () => {
   const dispatch = useDispatch();
@@ -43,7 +46,7 @@ const DocumentDetails = () => {
         <div className='bg-gray-100 p-1'>
           <iframe
             src={document.fileUrl}
-            frameborder="0"
+            frameBorder="0"
             className='w-full h-[70vh] bg-white rounded border border-gray-300'
             title='Document Viewer'
             style={{
@@ -57,7 +60,7 @@ const DocumentDetails = () => {
   }
 
   const renderChat = () => {
-    return "Render chat interface here";
+    return <ChatInterface />;
   }
 
   const renderAIActions = () => {
@@ -98,7 +101,14 @@ const DocumentDetails = () => {
 
   return (
     <div>
-
+      <div className='mb-4'>
+        <Link to="/documents" className='inline-flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 transition-colors'>
+          <ArrowLeft size={16} />
+          Back to Documents
+        </Link>
+        <PageHeader title={document.title} />
+        <Tabs tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+      </div>
     </div>
   )
 }
