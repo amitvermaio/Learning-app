@@ -72,7 +72,7 @@ const DocumentCard = ({ document, onDelete }) => {
 
         {/* Stats */}
         <div className='flex items-center gap-3'>
-          {document.flashcardCount > 0 && (
+          {document.flashcardCount >= 0 && (
             <div className='flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-50 rounded-lg'>
               <BookOpen className='w-3.5 h-3.5 text-purple-600' strokeWidth={2} />
               <span className='text-xs font-semibold text-purple-700'>
@@ -81,11 +81,11 @@ const DocumentCard = ({ document, onDelete }) => {
             </div>
           )}
 
-          {document.quizCount > 0 && (
+          {document.quizCount >= 0 && (
             <div className='flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 rounded-lg'>
               <BrainCircuit className='w-3.5 h-3.5 text-emerald-600' strokeWidth={2} />
               <span className='text-xs font-semibold text-emerald-700'>
-                {document.quizCount} Quiz Questions
+                {document.quizCount} Quizzes
               </span>
             </div>
           )}

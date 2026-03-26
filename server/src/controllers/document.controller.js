@@ -18,7 +18,7 @@ const storeChunksInPinecone = async (chunks, documentId, userId) => {
 
   for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
     const batch = chunks.slice(i, i + BATCH_SIZE);
-    const texts = batch.map(chunk => chunk.pageContent);
+    const texts = batch.map((chunk) => chunk.pageContent);
     const vectors = await embeddings.embedDocuments(texts);
 
     const upsertPayload = batch.map((chunk, j) => ({
@@ -69,7 +69,10 @@ const extractAndChunkDocument = async (fileBuffer, mimeType) => {
 
   const rawDocs = await loader.load();
   if (!rawDocs || rawDocs.length === 0) {
-    throw new AppError('Could not extract text from the file. It may be scanned/image-based.', 400);
+    throw new AppError(
+      'Could not extract text from the file. It may be scanned/image-based.',
+      400
+    );
   }
 
   const splitter = new RecursiveCharacterTextSplitter({
@@ -78,40 +81,43 @@ const extractAndChunkDocument = async (fileBuffer, mimeType) => {
   });
 
   const chunks = await splitter.splitDocuments(rawDocs);
-  return { chunks, rawDocs };  // return rawDocs too so we can extract full text
+
+  if (!chunks || chunks.length === 0) {
+    throw new AppError('Failed to split document into chunks.', 400);
+  }
+
+  return { chunks, rawDocs };
 };
 
-
 export const uploadDocument = async (req, res, next) => {
+ 
+  const rollback = {
+    azureFileId: null,
+    mongoDocumentId: null,
+    userId: null, 
+    pineconeDocumentId: null,
+  };
+
   try {
     if (!req.file) return next(new AppError('No file uploaded', 400));
-
-    const { title } = req.body;
-    if (!title) return next(new AppError('Document title is required', 400));
+    if (!req.body.title) return next(new AppError('Document title is required', 400));
 
     const userId = req.user.id;
+    const { title } = req.body;
     const fileBuffer = req.file.buffer;
     const originalName = req.file.originalname;
 
-    // 1. Upload raw file to Azure 
     const uploadResponse = await uploadToAzureBlob({
       buffer: fileBuffer,
       mimeType: req.file.mimetype,
       originalName,
     });
+    rollback.azureFileId = uploadResponse.fileId;
 
-    // 2. Extract text + chunk using LangChain
+   
     const { chunks, rawDocs } = await extractAndChunkDocument(fileBuffer, req.file.mimetype);
+    const extractedText = rawDocs.map((d) => d.pageContent).join('\n\n');
 
-    if (!chunks || chunks.length === 0) {
-      return next(new AppError('Could not extract text from the file. It may be scanned/image-based.', 400));
-    }
-
-    // 3. Build full extracted text from rawDocs and save to MongoDB
-    // This is used later for flashcards, quiz, summary (no need to refetch from Azure)
-    const extractedText = rawDocs.map(d => d.pageContent).join('\n\n');
-
-    // 4. Save document to MongoDB
     const document = await Document.create({
       user: userId,
       title,
@@ -124,19 +130,16 @@ export const uploadDocument = async (req, res, next) => {
       extractedText,
       status: 'processing',
     });
+    rollback.mongoDocumentId = document._id; 
 
-    // 5. Store chunks in Pinecone
-    try {
-      await storeChunksInPinecone(chunks, document._id, userId);
-      document.status = 'ready';
-    } catch (embeddingError) {
-      console.error('Embedding error:', embeddingError);
-      document.status = 'failed';
-    }
+    await storeChunksInPinecone(chunks, document._id, userId);
+    rollback.pineconeDocumentId = document._id; 
+    rollback.userId = userId;            
 
+    document.status = 'ready';
     await document.save();
 
-    res.status(201).json(
+    return res.status(201).json(
       new ApiResponse(
         201,
         {
@@ -155,6 +158,29 @@ export const uploadDocument = async (req, res, next) => {
       )
     );
   } catch (error) {
+    console.error('Upload failed, initiating rollback...', error);
+
+    const rollbackResults = await Promise.allSettled([
+      rollback.azureFileId
+        ? deleteFromAzureBlob(rollback.azureFileId)
+        : Promise.resolve(),
+
+      rollback.mongoDocumentId
+        ? Document.findByIdAndDelete(rollback.mongoDocumentId)
+        : Promise.resolve(),
+
+      rollback.pineconeDocumentId && rollback.userId       
+        ? deleteDocumentFromPinecone(rollback.pineconeDocumentId, rollback.userId)
+        : Promise.resolve(),
+    ]);
+
+    rollbackResults.forEach((result, i) => {
+      const labels = ['Azure', 'MongoDB', 'Pinecone'];
+      if (result.status === 'rejected') {
+        console.error(`Rollback failed for ${labels[i]}:`, result.reason);
+      }
+    });
+
     next(error);
   }
 };
@@ -162,7 +188,6 @@ export const uploadDocument = async (req, res, next) => {
 
 export const getDocuments = async (req, res, next) => {
   try {
-    // exclude extractedText from list view — it's large and not needed here
     const documents = await Document.find({ user: req.user.id })
       .select('-extractedText')
       .sort({ uploadDate: -1 });
@@ -176,7 +201,6 @@ export const getDocuments = async (req, res, next) => {
 
 export const getDocumentById = async (req, res, next) => {
   try {
-    // exclude extractedText from single fetch too — frontend doesn't need raw text
     const document = await Document.findOne({ _id: req.params.id, user: req.user.id })
       .select('-extractedText');
 
@@ -200,7 +224,7 @@ export const deleteDocument = async (req, res, next) => {
     // 1. Delete from Azure Blob
     if (document.fileId) {
       try {
-        await deleteFromAzureBlob(document.fileId); // use named import, not uploadToAzureBlob.deleteFile
+        await deleteFromAzureBlob(document.fileId); 
       } catch (azureError) {
         console.error('Azure Blob deletion error:', azureError.message);
       }

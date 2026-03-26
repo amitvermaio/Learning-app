@@ -5,6 +5,7 @@ import {
 	setdocuments,
 	setcurrentdocument,
 	setdocumenterror,
+	setcurrentdocumentloading
 } from '../reducers/documentSlice';
 
 const extractdata = (responseData) => responseData?.data || responseData;
@@ -43,16 +44,16 @@ export const asyncgetdocuments = () => async (dispatch) => {
 
 export const asyncgetdocumentbyid = (id) => async (dispatch) => {
 	try {
-		dispatch(setdocumentloading());
+		dispatch(setcurrentdocumentloading(true));
 		const { data } = await api.get(`/documents/${id}`);
 		const response = extractdata(data);
 		dispatch(setcurrentdocument(response?.document || null));
-		return true;
 	} catch (error) {
 		const message = error.response?.data?.message || 'Failed to fetch document';
 		dispatch(setdocumenterror(message));
 		toast.error(message);
-		return false;
+	} finally {
+		dispatch(setcurrentdocumentloading(false));
 	}
 };
 
