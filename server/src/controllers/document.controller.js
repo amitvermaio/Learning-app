@@ -189,7 +189,7 @@ export const uploadDocument = async (req, res, next) => {
 export const getDocuments = async (req, res, next) => {
   try {
     const documents = await Document.find({ user: req.user.id })
-      .select('-extractedText')
+      .select('-extractedText -__v -summary')
       .sort({ uploadDate: -1 });
 
     res.status(200).json(new ApiResponse(200, { documents }, 'Documents fetched successfully'));
@@ -202,7 +202,7 @@ export const getDocuments = async (req, res, next) => {
 export const getDocumentById = async (req, res, next) => {
   try {
     const document = await Document.findOne({ _id: req.params.id, user: req.user.id })
-      .select('-extractedText');
+      .select('-extractedText -__v -summary');
 
     if (!document) return next(new AppError('Document not found', 404));
 
