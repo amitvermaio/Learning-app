@@ -36,7 +36,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         {/* Logo and close button for mobile */}
         <div className='flex items-center justify-between h-16 px-5 border-b border-slate-200/60'>
           <div className='flex items-center gap-3'>
-            <div className='flex items-center jsutify-center w-9 h-9 rounded-xl bg-linear-to-br from-emerald-400 to-teal-500 shadow-emerald-500/30'>
+            <div className='flex items-center justify-center w-9 h-9 rounded-xl bg-linear-to-br from-emerald-400 to-teal-500 shadow-emerald-500/30'>
               <BrainCircuit className='text-white' size={20} strokeWidth={2.5} />
             </div>
             <h1 className='text-sm md:text-base font-bold text-slate-900 tracking-tight'>AI Learning Assistant</h1>

@@ -169,6 +169,7 @@ const AiActions = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={modalTitle}
+        contentToCopy={modalContent}   // 👈 add this
       >
         <div className='max-h-[60vh] overflow-y-auto prose prose-sm max-w-none prose-slate'>
           <MarkdownRenderer content={modalContent} />

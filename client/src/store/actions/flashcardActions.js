@@ -17,7 +17,8 @@ export const asyncgetallflashcardsets = () => async (dispatch) => {
 		dispatch(setflashcardsets(response || []));
 		return true;
 	} catch (error) {
-		const message = error.response?.data?.message || 'Failed to fetch flashcard sets';
+		const message =
+			error.response?.data?.message || 'Failed to fetch flashcard sets';
 		dispatch(setflashcarderror(message));
 		toast.error(message);
 		return false;
@@ -32,7 +33,8 @@ export const asyncgetflashcards = (documentId) => async (dispatch) => {
 		dispatch(setflashcards(response || []));
 		return true;
 	} catch (error) {
-		const message = error.response?.data?.message || 'Failed to fetch flashcards';
+		const message =
+			error.response?.data?.message || 'Failed to fetch flashcards';
 		dispatch(setflashcarderror(message));
 		toast.error(message);
 		return false;
@@ -48,7 +50,8 @@ export const asyncreviewflashcard = (cardId) => async (dispatch) => {
 		toast.success('Flashcard reviewed successfully');
 		return true;
 	} catch (error) {
-		const message = error.response?.data?.message || 'Failed to review flashcard';
+		const message =
+			error.response?.data?.message || 'Failed to review flashcard';
 		dispatch(setflashcarderror(message));
 		toast.error(message);
 		return false;
@@ -64,7 +67,8 @@ export const asynctogglestarflashcard = (cardId) => async (dispatch) => {
 		toast.success('Flashcard updated successfully');
 		return true;
 	} catch (error) {
-		const message = error.response?.data?.message || 'Failed to update flashcard';
+		const message =
+			error.response?.data?.message || 'Failed to update flashcard';
 		dispatch(setflashcarderror(message));
 		toast.error(message);
 		return false;
@@ -75,11 +79,14 @@ export const asyncdeleteflashcardset = (id) => async (dispatch) => {
 	try {
 		dispatch(setflashcardloading());
 		await api.delete(`/flashcards/${id}`);
-		dispatch(asyncgetallflashcardsets());
+
+		await dispatch(asyncgetallflashcardsets());
+
 		toast.success('Flashcard set deleted successfully');
 		return true;
 	} catch (error) {
-		const message = error.response?.data?.message || 'Failed to delete flashcard set';
+		const message =
+			error.response?.data?.message || 'Failed to delete flashcard set';
 		dispatch(setflashcarderror(message));
 		toast.error(message);
 		return false;

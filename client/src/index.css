@@ -15,3 +15,8 @@
     background-color: #fcfbfc;
   }
 }
+
+::selection {
+  background-color: #0d9488;
+  color: white;
+}
