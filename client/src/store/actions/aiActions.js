@@ -64,7 +64,7 @@ export const asyncexplainconcept = (payload) => async (dispatch) => {
 		const { data } = await api.post('/ai/explain-concept', payload);
 		const response = extractdata(data);
 		dispatch(setaiexplanation(response));
-		return response; // ✅ IMPORTANT
+		return response; 
 	} catch (error) {
 		const message = error.response?.data?.message || 'Failed to explain concept';
 		dispatch(setaierror(message));

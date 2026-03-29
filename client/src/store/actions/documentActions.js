@@ -15,6 +15,14 @@ export const asyncuploaddocument = (payload) => async (dispatch) => {
 		dispatch(setdocumentloading());
 		const { data } = await api.post('/documents/upload', payload);
 		const response = extractdata(data);
+
+		if (response.statusCode >= 400) {
+			const message = response.message || 'Failed to upload document';
+			dispatch(setdocumenterror(message));
+			toast.error(message);
+			return null;
+		}
+
 		const uploaded = response?.document;
 		dispatch(setcurrentdocument(uploaded || null));
 		toast.success('Document uploaded successfully');
