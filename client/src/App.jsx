@@ -21,6 +21,7 @@ import QuizTake from './pages/quiz/QuizTake';
 import QuizResult from './pages/quiz/QuizResult';
 import Profile from './pages/profile/Profile';
 import NotFound from './pages/NotFound';
+import FlashcardPage from './pages/flashcards/FlashcardPage';
 
 const App = () => {
   const dispatch = useDispatch();
@@ -63,10 +64,11 @@ const App = () => {
 
           <Route path="/documents" element={<DocumentList />} />
           <Route path="/documents/:id" element={<DocumentDetails />} />
-          
+          <Route path="/documents/:id/flashcards" element={<FlashcardPage />} />
+
           <Route path="/flashcards" element={<FlashcardList />} />
           <Route path="/flashcards/:id" element={<Flashcard />} />
-          
+
           <Route path="/quiz/:id" element={<QuizTake />} />
           <Route path="/quiz/:id/result" element={<QuizResult />} />
           
