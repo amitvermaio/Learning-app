@@ -197,7 +197,6 @@ export const generateSummary = async (req, res, next) => {
   }
 }
 
-// @desc Chat with document
 export const chat = async (req, res, next) => {
   try {
     const { documentId, query } = req.body;
@@ -335,7 +334,7 @@ export const getChatHistory = async (req, res, next) => {
 
     const chathistory = await Chat.findOne({ document: documentId, user: req.user.id });
     if (!chathistory) {
-      return new ApiResponse(200, [], 'No chat history found');
+      return res.status(201).json(new ApiResponse(200, [], 'No chat history found'));
     }
 
     res.status(200).json(new ApiResponse(
@@ -343,6 +342,7 @@ export const getChatHistory = async (req, res, next) => {
       chathistory.messages,
       'Chat history retrieved successfully'
     ));
+
   } catch (error) {
     next(error);
   }
