@@ -1,46 +1,55 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-	quizzes: [],
-	currentquiz: null,
-	quizresult: null,
-	status: 'idle',
-	error: null,
+  quizzes: [],
+  currentquiz: null,
+  quizresult: null,
+  status: 'idle',
+  error: null,
 };
 
 const quizSlice = createSlice({
-	name: 'quiz',
-	initialState,
-	reducers: {
-		setquizloading: (state) => {
-			state.status = 'loading';
-			state.error = null;
-		},
-		setquizzes: (state, action) => {
-			state.status = 'succeeded';
-			state.quizzes = action.payload || [];
-		},
-		setcurrentquiz: (state, action) => {
-			state.status = 'succeeded';
-			state.currentquiz = action.payload || null;
-		},
-		setquizresult: (state, action) => {
-			state.status = 'succeeded';
-			state.quizresult = action.payload || null;
-		},
-		setquizerror: (state, action) => {
-			state.status = 'failed';
-			state.error = action.payload || null;
-		},
-	},
+  name: 'quiz',
+  initialState,
+  reducers: {
+    setquizloading: (state) => {
+      state.status = 'loading';
+      state.error = null;
+    },
+
+    setquizzes: (state, action) => {
+      state.status = 'succeeded';
+      state.quizzes = action.payload ?? [];
+    },
+
+    setcurrentquiz: (state, action) => {
+      state.status = 'succeeded';
+      state.currentquiz = action.payload ?? null;
+    },
+
+    setquizresult: (state, action) => {
+      state.status = 'succeeded';
+      state.quizresult = action.payload ?? null;
+    },
+
+    removequiz: (state, action) => {
+      state.quizzes = state.quizzes.filter(q => q._id !== action.payload);
+    },
+
+    setquizerror: (state, action) => {
+      state.status = 'failed';
+      state.error = action.payload ?? 'Something went wrong';
+    },
+  },
 });
 
 export const {
-	setquizloading,
-	setquizzes,
-	setcurrentquiz,
-	setquizresult,
-	setquizerror,
+  setquizloading,
+  setquizzes,
+  setcurrentquiz,
+  setquizresult,
+  removequiz,
+  setquizerror,
 } = quizSlice.actions;
 
 export default quizSlice.reducer;

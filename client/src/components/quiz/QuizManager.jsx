@@ -19,7 +19,8 @@ import { toast } from 'sonner';
 const QuizManager = ({ documentId }) => {
   const dispatch = useDispatch();
 
-  const [quizzes, setQuizzes] = useState([]);
+  const { quizzes, status } = useSelector((state) => state.quiz);
+
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
@@ -28,11 +29,24 @@ const QuizManager = ({ documentId }) => {
   const [deleting, setDeleting] = useState(false);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
 
-  const handleGenerateQuiz = async () => {
+  useEffect(() => {
+    if (documentId) {
+      dispatch(asyncgetquizzes(documentId));
+    }
+  }, [documentId, dispatch]);
+
+  const handleGenerateQuiz = async (e) => {
+    e.preventDefault();
     try {
-      console.log('Generating quiz with', { documentId, numQuestions });
+      setGenerating(true);
+      await dispatch(asyncgeneratequiz({ documentId, numQuestions }));
+      await dispatch(asyncgetquizzes(documentId));
+      setIsGenerateModalOpen(false);
     } catch (error) {
       console.error('Error generating quiz:', error);
+      toast.error('Failed to generate quiz');
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -44,16 +58,21 @@ const QuizManager = ({ documentId }) => {
   const handleConfirmDelete = async () => {
     if (!selectedQuiz) return;
     setDeleting(true)
-    // logic for deletion
-    toast.success(`${selectedQuiz.title || 'Quiz'} deleted.`)
-    setIsDeleteModalOpen(false);
-    setSelectedQuiz(null);
-    setDeleting(false);
-    setQuizzes(quizzes.filter(q => q._id != selectedQuiz._id))
+    try {
+      await dispatch(asyncdeletequiz(selectedQuiz._id));
+      toast.success(`${selectedQuiz.title || 'Quiz'} deleted.`);
+      setIsDeleteModalOpen(false);
+      setSelectedQuiz(null);
+    } catch (error) {
+      console.error(error);
+      toast.error('Delete failed');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const renderQuizContent = () => {
-    if (loading) {
+    if (status === 'loading') {
       return <Spinner />;
     }
 
@@ -75,7 +94,6 @@ const QuizManager = ({ documentId }) => {
     )
   }
 
-
   return (
     <div className='bg-white border border-neutral-200 rounded-lg p-6'>
       <div className='flex justify-end gap-2 mb-4'>
@@ -87,7 +105,6 @@ const QuizManager = ({ documentId }) => {
 
       {renderQuizContent()}
 
-      {/* generate quiz */}
       <Modal
         isOpen={isGenerateModalOpen}
         onClose={() => setIsGenerateModalOpen(false)}
@@ -103,6 +120,7 @@ const QuizManager = ({ documentId }) => {
               value={numQuestions}
               onChange={(e) => setNumQuestions(Math.max(1, parseInt(e.target.value) || 1))}
               min={1}
+              max={15}
               required
               className='w-full h-9 px-3 border border-neutral-200 rounded-lg bg-white text-sm text-neutral-900 placeholder-neutral-400 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[#00d492] focus:border-transparent'
             />
@@ -128,7 +146,6 @@ const QuizManager = ({ documentId }) => {
         </form>
       </Modal>
 
-      {/* delete confirmation */}
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
@@ -152,7 +169,7 @@ const QuizManager = ({ documentId }) => {
               disabled={deleting}
               className='bg-red-500 hover:bg-red-600 active:bg-red-700 focus:ring-red-500'
             >
-              { deleting ? 'Deleting...' : 'Delete' }
+              {deleting ? 'Deleting...' : 'Delete'}
             </Button>
           </div>
         </div>
@@ -161,4 +178,4 @@ const QuizManager = ({ documentId }) => {
   )
 }
 
-export default QuizManager
+export default QuizManager;

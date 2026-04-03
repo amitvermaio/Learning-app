@@ -25,16 +25,24 @@ import moment from 'moment';
 const FlashcardManager = ({ documentId }) => {
   const dispatch = useDispatch();
 
-  const { flashcardsets, flashcards, status, error } = useSelector(
+  const { flashcardsets, status } = useSelector(
     (state) => state.flashcard
   );
 
+  const [flashcards, setFlashcards] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedSet, setSelectedSet] = useState(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [setToDelete, setSetToDelete] = useState(null);
+
+  useEffect(() => {
+    const filteredFlashcards = flashcardsets.filter(
+      (f) => f.document?._id === documentId
+    );
+    setFlashcards(filteredFlashcards);
+  }, [documentId, flashcardsets]);
 
   useEffect(() => {
     if (documentId) {
@@ -91,7 +99,6 @@ const FlashcardManager = ({ documentId }) => {
     try {
       await dispatch(asynctogglestarflashcard(cardId));
 
-      // 🔥 important refresh
       await dispatch(asyncgetallflashcardsets());
 
       const updatedSet = flashcardsets.find(
@@ -250,8 +257,8 @@ const FlashcardManager = ({ documentId }) => {
               Your Flashcard Sets
             </h3>
             <p className='text-sm text-slate-500 mt-1'>
-              {flashcardsets.length}{" "}
-              {flashcardsets.length === 1 ? "set" : "sets"} available.
+              {flashcards.length}{" "}
+              {flashcards.length === 1 ? "set" : "sets"} available.
             </p>
           </div>
           <button
@@ -274,7 +281,7 @@ const FlashcardManager = ({ documentId }) => {
         </div>
 
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
-          {flashcardsets.map((set) => (
+          {flashcards.map((set) => (
             <div
               key={set._id}
               onClick={() => handleSelectSet(set)}

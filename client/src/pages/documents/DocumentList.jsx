@@ -3,7 +3,7 @@ import { Plus, Upload, Trash2, FileText, X } from 'lucide-react'
 import { toast } from 'sonner';
 
 import { useSelector, useDispatch } from 'react-redux';
-import { asyncuploaddocument, asyncdeletedocument } from '../../store/actions/documentActions';
+import { asyncuploaddocument, asyncdeletedocument, asyncgetdocuments } from '../../store/actions/documentActions';
 import Spinner from '../../components/common/Spinner';
 import Button from '../../components/common/Button';
 import DocumentCard from '../../components/documents/DocumentCard';
@@ -27,7 +27,7 @@ const DocumentList = () => {
     const file = e.target.files[0];
     if (file) {
       setUploadFile(file);
-      setUploadTitle(file.name.replace(/\.[^/.]+$/, "")); // Remove file extension for title
+      setUploadTitle(file.name.replace(/\.[^/.]+$/, "")); 
     }
   }
 
@@ -73,6 +73,7 @@ const DocumentList = () => {
       setSelectedDoc(null);
       // again do the fetching of documents to update the list after deletion
       // or just do filter from sync action
+      await dispatch(asyncgetdocuments())
     } catch (error) {
       toast.error("Failed to delete document.");
       console.log(error);
