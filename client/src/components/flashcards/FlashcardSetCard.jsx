@@ -5,9 +5,11 @@ import moment from 'moment';
 
 const FlashcardSetCard = ({ flashcardSet }) => {
   const navigate = useNavigate();
+  const documentRef = flashcardSet?.document || flashcardSet?.documentId;
 
   const handleStudyNow = () => {
-    navigate(`/documents/${flashcardSet.document._id}/flashcards`);
+    if (!documentRef?._id) return;
+    navigate(`/documents/${documentRef._id}/flashcards`);
   }
 
   const reviewedCount = flashcardSet.cards.filter(card => card.lastReviewed).length;
@@ -26,8 +28,8 @@ const FlashcardSetCard = ({ flashcardSet }) => {
             <BookOpen className='w-6 h-6 text-emerald-600' strokeWidth={2} />
           </div>
           <div className='flex-1 min-w-0'>
-            <h3 className='text-base font-semibold text-slate-900 line-clamp-2 mb-1' title={flashcardSet?.documentId?.title}>
-              {flashcardSet?.documentId?.title}
+            <h3 className='text-base font-semibold text-slate-900 line-clamp-2 mb-1' title={documentRef?.title}>
+              {documentRef?.title}
             </h3>
             <p className='text-xs font-medium text-slate-500 uppercase tracking-wide'>
               Created {moment(flashcardSet.createdAt).fromNow()}

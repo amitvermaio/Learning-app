@@ -33,8 +33,9 @@ const FlashcardPage = () => {
     setLoading(true);
     try {
       const response = await dispatch(asyncgetflashcards(documentId));
-      setFlashcardSets(response.data[0])
-      setFlashcards(response.data[0]?.cards || []);
+      const flashcardSet = Array.isArray(response) ? response[0] : null;
+      setFlashcardSets(flashcardSet);
+      setFlashcards(flashcardSet?.cards || []);
     } catch (error) {
       console.error('Error fetching flashcards:', error);
     } finally {
@@ -76,7 +77,7 @@ const FlashcardPage = () => {
       await dispatch(asynctogglestarflashcard(cardId));
       setFlashcards((prevFlashcard) =>
         prevFlashcard.map((card) =>
-          card._id === cardId ? { ...card, starred: !card.starred } : card
+          card._id === cardId ? { ...card, isStarred: !card.isStarred } : card
         )
       )
     } catch (error) {

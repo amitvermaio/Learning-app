@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { asyncgetquizresults } from '../../store/actions/quizActions'
+import { useDispatch } from 'react-redux';
 import PageHeader from '../../components/common/PageHeader';
 import Spinner from '../../components/common/Spinner';
 import { ArrowLeft, CheckCircle2, XCircle, Trophy, Target, BookOpen, Check, X } from 'lucide-react'
@@ -8,6 +9,7 @@ import { ArrowLeft, CheckCircle2, XCircle, Trophy, Target, BookOpen, Check, X } 
 const QuizResult = () => {
 
   const { quizId } = useParams()
+  const dispatch = useDispatch();
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -15,7 +17,7 @@ const QuizResult = () => {
     const fetchResults = async () => {
       try {
         setLoading(true);
-        const data = await asyncgetquizresults(quizId);
+        const data = await dispatch(asyncgetquizresults(quizId));
         setResults(data);
       } catch (error) {
         console.error('Error fetching quiz results:', error);
@@ -35,7 +37,7 @@ const QuizResult = () => {
     )
   }
 
-  if (!results || !results.data) {
+  if (!results) {
     return (
       <div className='flex items-center justify-center min-h-[60vh]'>
         <div className='text-center'>
@@ -45,7 +47,7 @@ const QuizResult = () => {
     )
   }
 
-  const { data: { quiz, results: detailedResults } } = results;
+  const { quiz, results: detailedResults } = results;
   const score = quiz.score;
   const totalQuestions = quiz.totalQuestions;
   const correctAnswers = quiz.correctAnswers;

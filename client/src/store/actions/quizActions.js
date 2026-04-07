@@ -16,13 +16,16 @@ export const asyncgetquizzes = (documentId) => async (dispatch) => {
     dispatch(setquizloading());
 
     const { data } = await api.get(`/quiz/${documentId}`);
+    const quizzes = data?.data || [];
 
-    dispatch(setquizzes(data?.data || []));
+    dispatch(setquizzes(quizzes));
+    return quizzes;
 
   } catch (error) {
     const message = error.response?.data?.message || 'Failed to fetch quizzes';
     dispatch(setquizerror(message));
     toast.error(message);
+    return null;
   }
 };
 
@@ -30,15 +33,18 @@ export const asyncgetquizbyid = (quizId) => async (dispatch) => {
   try {
     dispatch(setquizloading());
 
-    const { data } = await api.get(`/quiz/${quizId}`);
+    const { data } = await api.get(`/quiz/by-id/${quizId}`);
     const res = extractdata(data);
+    const quiz = res?.data ?? null;
 
-    dispatch(setcurrentquiz(res?.data ?? null));
+    dispatch(setcurrentquiz(quiz));
+    return quiz;
 
   } catch (error) {
     const message = error.response?.data?.message || 'Failed to fetch quiz';
     dispatch(setquizerror(message));
     toast.error(message);
+    return null;
   }
 };
 
@@ -48,15 +54,18 @@ export const asyncsubmitquiz = (id, answers) => async (dispatch) => {
 
     const { data } = await api.post(`/quiz/${id}/submit`, { answers });
     const res = extractdata(data);
+    const result = res?.data ?? null;
 
-    dispatch(setquizresult(res?.data ?? null));
+    dispatch(setquizresult(result));
 
     toast.success('Quiz submitted successfully');
+    return result;
 
   } catch (error) {
     const message = error.response?.data?.message || 'Failed to submit quiz';
     dispatch(setquizerror(message));
     toast.error(message);
+    return null;
   }
 };
 
@@ -66,13 +75,16 @@ export const asyncgetquizresults = (id) => async (dispatch) => {
 
     const { data } = await api.get(`/quiz/${id}/results`);
     const res = extractdata(data);
+    const result = res?.data ?? null;
 
-    dispatch(setquizresult(res?.data ?? null));
+    dispatch(setquizresult(result));
+    return result;
 
   } catch (error) {
     const message = error.response?.data?.message || 'Failed to fetch results';
     dispatch(setquizerror(message));
     toast.error(message);
+    return null;
   }
 };
 
@@ -84,10 +96,12 @@ export const asyncdeletequiz = (quizId) => async (dispatch) => {
 
     dispatch(removequiz(quizId));
     toast.success('Quiz deleted successfully');
+    return true;
 
   } catch (error) {
     const message = error.response?.data?.message || 'Failed to delete quiz';
     dispatch(setquizerror(message));
     toast.error(message);
+    return false;
   }
 };

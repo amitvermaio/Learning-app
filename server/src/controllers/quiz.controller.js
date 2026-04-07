@@ -7,8 +7,8 @@ export const getQuizzes = async (req, res, next) => {
   try {
     const quizzes = await Quiz.find({
       user: req.user.id,
-      documentId: req.params.documentId
-    }).populate('documentId', 'title fileName').sort({ createdAt: -1 });
+      document: req.params.documentId
+    }).populate('document', 'title fileName').sort({ createdAt: -1 });
 
     res.status(200).json(new ApiResponse(200, quizzes, 'Quizzes fetched successfully'));
   } catch (error) {
@@ -59,9 +59,9 @@ export const submitQuiz = async (req, res, next) => {
 
         userAnswers.push({
           questionIndex,
-          selectedAnswer,
+          selectedOption: selectedAnswer,
           isCorrect,
-          answerAt: new Date()
+          answeredAt: new Date()
         });
       }
     });
@@ -114,7 +114,7 @@ export const getQuizResults = async (req, res, next) => {
         question: question.question,
         options: question.options,
         correctAnswer: question.correctAnswer,
-        selectedAnswer: userAnswer?.selectedAnswer || null,
+        selectedAnswer: userAnswer?.selectedOption || null,
         isCorrect: userAnswer?.isCorrect || false,
         explanation: question.explanation || null
       };
@@ -129,6 +129,7 @@ export const getQuizResults = async (req, res, next) => {
           document: quiz.document,
           score: quiz.score,
           totalQuestions: quiz.totalQuestions,
+          correctAnswers: quiz.userAnswers.filter((answer) => answer.isCorrect).length,
           percentage: quiz.score
         },
         results: detailedResults

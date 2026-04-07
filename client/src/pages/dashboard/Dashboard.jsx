@@ -61,7 +61,7 @@ const Dashboard = () => {
       id: quiz._id,
       description: quiz.title || quiz.document?.title || 'Untitled Quiz',
       timestamp: quiz.completedAt,
-      link: `/quizzes/${quiz._id}`,
+      link: `/quiz/${quiz._id}`,
       type: 'quiz',
     }))
   ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));

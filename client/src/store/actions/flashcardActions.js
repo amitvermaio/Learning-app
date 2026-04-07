@@ -15,13 +15,13 @@ export const asyncgetallflashcardsets = () => async (dispatch) => {
 		const { data } = await api.get('/flashcards');
 		const response = extractdata(data);
 		dispatch(setflashcardsets(response || []));
-		return true;
+		return response || [];
 	} catch (error) {
 		const message =
 			error.response?.data?.message || 'Failed to fetch flashcard sets';
 		dispatch(setflashcarderror(message));
 		toast.error(message);
-		return false;
+		return null;
 	}
 };
 
@@ -31,13 +31,13 @@ export const asyncgetflashcards = (documentId) => async (dispatch) => {
 		const { data } = await api.get(`/flashcards/${documentId}`);
 		const response = extractdata(data);
 		dispatch(setflashcards(response || []));
-		return true;
+		return response || [];
 	} catch (error) {
 		const message =
 			error.response?.data?.message || 'Failed to fetch flashcards';
 		dispatch(setflashcarderror(message));
 		toast.error(message);
-		return false;
+		return null;
 	}
 };
 
@@ -47,13 +47,13 @@ export const asyncreviewflashcard = (cardId) => async (dispatch) => {
 		const { data } = await api.post(`/flashcards/${cardId}/review`);
 		const response = extractdata(data);
 		dispatch(setflashcards(response?.cards || []));
-		return true;
+		return response;
 	} catch (error) {
 		const message =
 			error.response?.data?.message || 'Failed to review flashcard';
 		dispatch(setflashcarderror(message));
 		toast.error(message);
-		return false;
+		return null;
 	}
 };
 
@@ -64,13 +64,13 @@ export const asynctogglestarflashcard = (cardId) => async (dispatch) => {
 		const response = extractdata(data);
 		dispatch(setflashcards(response?.cards || []));
 		toast.success('Flashcard updated successfully');
-		return true;
+		return response;
 	} catch (error) {
 		const message =
 			error.response?.data?.message || 'Failed to update flashcard';
 		dispatch(setflashcarderror(message));
 		toast.error(message);
-		return false;
+		return null;
 	}
 };
 

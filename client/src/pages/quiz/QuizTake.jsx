@@ -60,7 +60,7 @@ const QuizTake = () => {
       return { questionIndex, selectedAnswer };
     });
 
-    await dispatch(asyncsubmitquiz(formattedAnswer));
+    await dispatch(asyncsubmitquiz(quizId, formattedAnswer));
     setSubmitting(false);
     navigate(`/quiz/${quizId}/results`);
   }
