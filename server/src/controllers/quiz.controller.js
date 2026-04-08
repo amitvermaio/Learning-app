@@ -51,7 +51,7 @@ export const submitQuiz = async (req, res, next) => {
 
       if (questionIndex < quiz.questions.length) {
         const question = quiz.questions[questionIndex];
-        const isCorrect = question.correctAnswer === selectedAnswer;
+        const isCorrect = question.correctAnswer === selectedAnswer[0].toUpperCase();
 
         if (isCorrect) {
           correctCount++;

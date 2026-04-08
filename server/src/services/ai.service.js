@@ -40,7 +40,7 @@ export const embeddings = {
 
 export const llm = new ChatGoogleGenerativeAI({
   apiKey: config.googleApiKey,
-  model: "gemini-2.5-flash",
+  model: "gemini-3-flash-preview",
   temperature: 0.5,
 });
 
