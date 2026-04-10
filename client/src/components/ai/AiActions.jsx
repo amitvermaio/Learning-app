@@ -20,11 +20,11 @@ const AiActions = () => {
     setLoadingAction('summary');
     try {
       const res = await dispatch(
-        asyncgeneratesummary({ documentId: id }) // ✅ FIX
+        asyncgeneratesummary({ documentId: id }) 
       );
 
       setModalTitle('Document Summary');
-      setModalContent(res?.summary || 'No summary generated'); // ✅ FIX
+      setModalContent(res?.summary || 'No summary generated');
       setIsModalOpen(true);
     } catch (error) {
       console.error('Error generating summary:', error);
@@ -51,7 +51,7 @@ const AiActions = () => {
       );
 
       setModalTitle(`Explanation of "${concept}"`);
-      setModalContent(res?.explanation || 'No explanation found'); // ✅ FIX
+      setModalContent(res?.explanation || 'No explanation found'); 
       setIsModalOpen(true);
     } catch (error) {
       console.error('Error explaining concept:', error);
@@ -106,9 +106,8 @@ const AiActions = () => {
               >
                 {loadingAction === 'summary' ? (
                   <span className='flex items-center gap-2'>
-                    <div className='w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin'>
-                      Loading...
-                    </div>
+                    <div className='w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin' />
+                    Loading...
                   </span>
                 ) : (
                   "Summarize"
@@ -150,9 +149,8 @@ const AiActions = () => {
                 >
                   {loadingAction === 'explain' ? (
                     <span className='flex items-center gap-2'>
-                      <div className='w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin'>
+                      <div className='w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin' />
                         Loading...
-                      </div>
                     </span>
                   ) : (
                     "Explain"
@@ -169,7 +167,7 @@ const AiActions = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={modalTitle}
-        contentToCopy={modalContent}   // 👈 add this
+        contentToCopy={modalContent}
       >
         <div className='max-h-[60vh] overflow-y-auto prose prose-sm max-w-none prose-slate'>
           <MarkdownRenderer content={modalContent} />

@@ -1,34 +1,29 @@
-import { useState, useEffect } from 'react'
 import PageHeader from '../../components/common/PageHeader'
 import Spinner from '../../components/common/Spinner'
 import EmptyState from '../../components/common/EmptyState'
 import FlashcardSetCard from '../../components/flashcards/FlashcardSetCard';
 import { useDispatch, useSelector } from 'react-redux';
 import { asyncgetallflashcardsets } from '../../store/actions/flashcardActions';
+import { useEffect } from 'react';
 
 const FlashcardList = () => {
-
   const dispatch = useDispatch();
-  const { flashcardsets, status, error } = useSelector((state) => state.flashcard);
+  const { flashcardsets, status } = useSelector((state) => state.flashcard);
 
   useEffect(() => {
-    if (status === 'idle') {
-      dispatch(asyncgetallflashcardsets());
-    }
+    dispatch(asyncgetallflashcardsets());
   }, [dispatch]);
 
   const renderContent = () => {
-    if (status === 'loading') {
-      return <Spinner />;
-    }
+    if (status === 'loading') return <Spinner />;
 
-    if (flashcardsets.length === 0) {
+    if (!flashcardsets.length) {
       return (
-        <EmptyState 
-          title={"No Flashcard Sets Found"}
-          description={"You haven't generated any flashcards. Go to documents to generate you first set"}
+        <EmptyState
+          title="No Flashcard Sets Found"
+          description="You haven't generated any flashcards. Go to documents to generate your first set."
         />
-      )
+      );
     }
 
     return (
@@ -37,15 +32,15 @@ const FlashcardList = () => {
           <FlashcardSetCard key={set._id} flashcardSet={set} />
         ))}
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <div>
-      <PageHeader title={"All Flashcard Sets"} />
+      <PageHeader title="All Flashcard Sets" />
       {renderContent()}
     </div>
-  )
-}
+  );
+};
 
-export default FlashcardList
+export default FlashcardList;

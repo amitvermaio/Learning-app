@@ -1,40 +1,50 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-	flashcardsets: [],
-	flashcards: [],
-	status: 'idle',
-	error: null,
+  flashcardsets: [],
+  flashcards: [],
+  status: 'idle',
+  error: null,
 };
 
 const flashcardSlice = createSlice({
-	name: 'flashcard',
-	initialState,
-	reducers: {
-		setflashcardloading: (state) => {
-			state.status = 'loading';
-			state.error = null;
-		},
-		setflashcardsets: (state, action) => {
-			state.status = 'succeeded';
-			state.flashcardsets = action.payload || [];
-		},
-		setflashcards: (state, action) => {
-			state.status = 'succeeded';
-			state.flashcards = action.payload || [];
-		},
-		setflashcarderror: (state, action) => {
-			state.status = 'failed';
-			state.error = action.payload || null;
-		},
-	},
+  name: 'flashcard',
+  initialState,
+  reducers: {
+    setflashcardloading: (state) => {
+      state.status = 'loading';
+      state.error = null;
+    },
+    setflashcardsets: (state, action) => {
+      state.status = 'succeeded';
+      state.flashcardsets = action.payload || [];
+    },
+    setflashcards: (state, action) => {
+      state.status = 'succeeded';
+      state.flashcards = action.payload || [];
+    },
+    setflashcarderror: (state, action) => {
+      state.status = 'failed';
+      state.error = action.payload || null;
+    },
+    updateFlashcardSet: (state, action) => {
+      const updated = action.payload;
+      if (!updated?._id) return;
+      const idx = state.flashcardsets.findIndex(s => s._id === updated._id);
+      if (idx !== -1) {
+        state.flashcardsets[idx] = updated;
+      }
+      state.status = 'succeeded';
+    },
+  },
 });
 
 export const {
-	setflashcardloading,
-	setflashcardsets,
-	setflashcards,
-	setflashcarderror,
+  setflashcardloading,
+  setflashcardsets,
+  setflashcards,
+  setflashcarderror,
+  updateFlashcardSet,
 } = flashcardSlice.actions;
 
 export default flashcardSlice.reducer;

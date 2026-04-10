@@ -63,7 +63,7 @@ export const reviewFlashcard = async (req, res, next) => {
       );
     }
 
-    flashCardSet.cards[cardIndex].reviewedAt = new Date();
+    flashCardSet.cards[cardIndex].lastReviewed = new Date();
     flashCardSet.cards[cardIndex].reviewCount += 1;
     await flashCardSet.save();
 
