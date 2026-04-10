@@ -8,7 +8,6 @@ import { pineconeIndex } from '../config/pinecone.js';
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { DocxLoader } from "@langchain/community/document_loaders/fs/docx";
 import { PPTXLoader } from "@langchain/community/document_loaders/fs/pptx";
-import { TextLoader } from "@langchain/classic/document_loaders/fs/text";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Blob } from 'buffer';
 import { embeddings } from '../services/ai.service.js';
@@ -59,9 +58,6 @@ const extractAndChunkDocument = async (fileBuffer, mimeType) => {
     case 'application/vnd.ms-powerpoint':
     case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
       loader = new PPTXLoader(blob);
-      break;
-    case 'text/plain':
-      loader = new TextLoader(blob);
       break;
     default:
       throw new AppError('Unsupported file type for text extraction', 400);

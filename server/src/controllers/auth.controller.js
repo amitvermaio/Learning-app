@@ -186,7 +186,7 @@ export const oauthLogin = async (req, res, next) => {
   try {
     const { provider, providerId, email, name, avatar } = req.body;
 
-    if (!['google', 'github'].includes(provider)) {
+    if (!['google'].includes(provider)) {
       throw new AppError('Unsupported OAuth provider', 400);
     }
 
