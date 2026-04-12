@@ -12,7 +12,9 @@ const Profile = () => {
   const { user, status } = useSelector(state => state.auth);
 
   useEffect(() => {
-    dispatch(asyncloaduser());
+    if (!user && status==='idle') {
+      dispatch(asyncloaduser());
+    }
   }, [dispatch]);
 
   if (status === 'loading' && !user) return <Spinner />;

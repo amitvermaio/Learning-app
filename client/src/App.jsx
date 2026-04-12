@@ -1,27 +1,32 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 
 import AuthWrapper from './components/auth/AuthWrapper';
+import UnauthWrapper from './components/auth/UnauthWrapper';
 
 import { asyncloaduser } from './store/actions/authActions';
 import { asyncgetdocuments } from './store/actions/documentActions';
 import { asyncgetdashboard } from './store/actions/progressActions';
 
-import Home from './pages/Home';
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import ForgotPassword from './pages/auth/ForgotPassword';
-import Dashboard from './pages/dashboard/Dashboard';
-import DocumentList from './pages/documents/DocumentList';
-import DocumentDetails from './pages/documents/DocumentDetails';
-import FlashcardList from './pages/flashcards/FlashcardList';
-import Flashcard from './pages/flashcards/Flashcard';
-import QuizTake from './pages/quiz/QuizTake';
-import QuizResult from './pages/quiz/QuizResult';
-import Profile from './pages/profile/Profile';
-import NotFound from './pages/NotFound';
-import FlashcardPage from './pages/flashcards/FlashcardPage';
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+
+const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'));
+const DocumentList = lazy(() => import('./pages/documents/DocumentList'));
+const DocumentDetails = lazy(() => import('./pages/documents/DocumentDetails'));
+const FlashcardPage = lazy(() => import('./pages/flashcards/FlashcardPage'));
+
+const FlashcardList = lazy(() => import('./pages/flashcards/FlashcardList'));
+const Flashcard = lazy(() => import('./pages/flashcards/Flashcard'));
+
+const QuizTake = lazy(() => import('./pages/quiz/QuizTake'));
+const QuizResult = lazy(() => import('./pages/quiz/QuizResult'));
+
+const Profile = lazy(() => import('./pages/profile/Profile'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 const App = () => {
   const dispatch = useDispatch();
@@ -49,37 +54,35 @@ const App = () => {
     }
   }, [dispatch, isAuthenticated, authStatus, documentsStatus]);
 
-
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
+      <Suspense fallback={<div>Loading...</div>}>
+        <Routes>
+          <Route path="/" element={<Home />} />
 
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route element={<UnauthWrapper />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+          </Route>
 
-        <Route element={<AuthWrapper />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route element={<AuthWrapper />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/documents" element={<DocumentList />} />
+            <Route path="/documents/:id" element={<DocumentDetails />} />
+            <Route path="/documents/:id/flashcards" element={<FlashcardPage />} />
+            <Route path="/flashcards" element={<FlashcardList />} />
+            <Route path="/flashcards/:id" element={<Flashcard />} />
+            <Route path="/quiz/:quizId" element={<QuizTake />} />
+            <Route path="/quiz/:quizId/results" element={<QuizResult />} />
+            <Route path="/profile" element={<Profile />} />
+          </Route>
 
-          <Route path="/documents" element={<DocumentList />} />
-          <Route path="/documents/:id" element={<DocumentDetails />} />
-          <Route path="/documents/:id/flashcards" element={<FlashcardPage />} />
-
-          <Route path="/flashcards" element={<FlashcardList />} />
-          <Route path="/flashcards/:id" element={<Flashcard />} />
-
-          <Route path="/quiz/:quizId" element={<QuizTake />} />
-          <Route path="/quiz/:quizId/results" element={<QuizResult />} />
-          
-          <Route path="/profile" element={<Profile />} />
-        </Route>
-
-
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </Router>
   )
 }
 
-export default App
+export default App;
