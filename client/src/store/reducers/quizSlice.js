@@ -34,6 +34,8 @@ const quizSlice = createSlice({
 
     removequiz: (state, action) => {
       state.quizzes = state.quizzes.filter(q => q._id !== action.payload);
+      state.status = 'succeeded';
+      state.error = null;
     },
 
     setquizerror: (state, action) => {

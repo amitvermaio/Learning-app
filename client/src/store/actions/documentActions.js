@@ -10,7 +10,7 @@ import {
 
 const extractdata = (res) => res?.data ?? res;
 
-export const asyncuploaddocument = (payload) => async (dispatch) => {
+export const asyncuploaddocument = (payload) => async (dispatch, getState) => {
   try {
     dispatch(setdocumentloading());
 
@@ -23,6 +23,12 @@ export const asyncuploaddocument = (payload) => async (dispatch) => {
 
     const doc = res?.document ?? null;
     dispatch(setcurrentdocument(doc));
+
+    if (doc?._id) {
+      const { documents } = getState().document;
+      const withoutDuplicate = documents.filter((item) => item._id !== doc._id);
+      dispatch(setdocuments([doc, ...withoutDuplicate]));
+    }
 
     toast.success('Document uploaded successfully');
     return doc;

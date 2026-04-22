@@ -1,5 +1,5 @@
 import React from 'react'
-import { Plus, Upload, Trash2, FileText, X } from 'lucide-react'
+import { Plus, Upload, Trash2, FileText, X, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner';
 
 import { useSelector, useDispatch } from 'react-redux';
@@ -7,6 +7,22 @@ import { asyncuploaddocument, asyncdeletedocument, asyncgetdocuments } from '../
 import Spinner from '../../components/common/Spinner';
 import Button from '../../components/common/Button';
 import DocumentCard from '../../components/documents/DocumentCard';
+
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+];
+
+const ALLOWED_FORMATS = [
+  { label: 'PDF', ext: '.pdf' },
+  { label: 'DOC', ext: '.doc' },
+  { label: 'DOCX', ext: '.docx' },
+  { label: 'PPT', ext: '.ppt' },
+  { label: 'PPTX', ext: '.pptx' },
+];
 
 const DocumentList = () => {
   const { documents, loading } = useSelector(state => state.document);
@@ -24,6 +40,13 @@ const DocumentList = () => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+        toast.error('Only PDF, DOC, DOCX, PPT and PPTX files are allowed.');
+        setUploadFile(null);
+        e.target.value = '';
+        return;
+      }
+
       setUploadFile(file);
       setUploadTitle(file.name.replace(/\.[^/.]+$/, "")); 
     }
@@ -36,14 +59,24 @@ const DocumentList = () => {
       toast.error("Please select a file and enter a title.");
       return;
     }
+
+    if (!ALLOWED_MIME_TYPES.includes(uploadFile.type)) {
+      toast.error('Unsupported file type. Please upload PDF, DOC, DOCX, PPT or PPTX.');
+      return;
+    }
+
     setUploading(true);
     const formData = new FormData();
     formData.append('file', uploadFile);
     formData.append('title', uploadTitle.trim());
 
     try {
-      await dispatch(asyncuploaddocument(formData));
-      toast.success("Document uploaded successfully.");
+      const uploadedDoc = await dispatch(asyncuploaddocument(formData));
+      if (!uploadedDoc) {
+        throw new Error('Upload failed');
+      }
+
+      await dispatch(asyncgetdocuments());
       setIsUploadModalOpen(false);
       setUploadFile(null);
       setUploadTitle('');
@@ -157,6 +190,41 @@ const DocumentList = () => {
             </Button>
           )}
         </div>
+
+        <div className='mb-7 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-xl p-5 shadow-sm'>
+          <div className='flex items-start gap-3'>
+            <div className='w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0'>
+              <ShieldCheck className='w-5 h-5 text-emerald-600' />
+            </div>
+            <div className='flex-1'>
+              <h3 className='text-sm font-semibold text-slate-900 mb-1'>Upload Guidelines</h3>
+              <p className='text-xs text-slate-600 mb-3'>
+                Only text-based documents are supported for accurate AI answers.
+              </p>
+
+              <div className='flex flex-wrap gap-2 mb-3'>
+                {ALLOWED_FORMATS.map((format) => (
+                  <span
+                    key={format.ext}
+                    className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700'
+                  >
+                    <FileText className='w-3.5 h-3.5 text-slate-500' />
+                    {format.label}
+                    <span className='text-slate-500 font-medium'>{format.ext}</span>
+                  </span>
+                ))}
+              </div>
+
+              <div className='flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2'>
+                <AlertTriangle className='w-4 h-4 text-amber-600 mt-0.5 shrink-0' />
+                <p className='text-xs text-amber-800'>
+                  Scanned or image-only documents are not supported. They may upload, but the AI cannot reliably read and answer from them.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {renderContent()}
       </div>
       {isUploadModalOpen && (
@@ -208,7 +276,7 @@ const DocumentList = () => {
                     type="file"
                     className='absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10'
                     onChange={handleFileChange}
-                    accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx"
                   />
                   <div className='flex flex-col items-center justify-center py-10 px-6'>
                     <div className='w-14 h-14 rounded-xl bg-linear-to-r from-emerald-100 to-teal-100 flex items-center justify-center mb-4'>
