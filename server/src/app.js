@@ -10,6 +10,8 @@ import { notFound, errorHandler } from './middlewares/error.middleware.js';
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(compression());
 app.use(morgan('dev'));
