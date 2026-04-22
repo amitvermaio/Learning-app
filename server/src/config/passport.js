@@ -5,7 +5,7 @@ import config from "./config.js";
 passport.use(new GoogleStrategy({
   clientID: config.googleClientId,
   clientSecret: config.googleClientSecret,
-  callbackURL: '/api/auth/google/callback'
+  callbackURL: config.googleCallbackUrl
 }, (accessToken, refreshToken, profile, done) => {
   return done(null, profile);
 }));
