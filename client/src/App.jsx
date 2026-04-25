@@ -1,4 +1,5 @@
 import React, { Suspense, lazy } from 'react'
+import { Analytics } from '@vercel/analytics/react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -89,6 +90,7 @@ const App = () => {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      <Analytics />
     </Router>
   )
 }
