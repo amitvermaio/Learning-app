@@ -1,11 +1,9 @@
-import { Resend } from 'resend';
 import config from '../config/config.js';
-
-const resend = new Resend(config.resendApiKey);
+import sendMail from '../config/nodemailer.js';
+import AppError from './AppError.js';
 
 export const sendVerificationOtpEmail = async ({ to, name, otp }) => {
-  const { error } = await resend.emails.send({
-    from: config.resendFrom,
+  await sendMail({
     to,
     subject: 'Verify your BrainWave AI account',
     html: `
@@ -19,16 +17,11 @@ export const sendVerificationOtpEmail = async ({ to, name, otp }) => {
       </div>
     `,
   });
-  if (error) {
-    console.error(`Failed to send OTP email to ${to}:`, error);
-    throw new Error('Failed to send verification email');
-  }
 };
 
 export const sendResetPasswordEmail = async ({ to, name, token }) => {
   const resetUrl = `${config.frontendUrl}/reset-password/${token}`;
-  const { error } = await resend.emails.send({
-    from: config.resendFrom,
+  await sendMail({
     to,
     subject: 'Reset your BrainWave AI password',
     html: `
@@ -46,16 +39,11 @@ export const sendResetPasswordEmail = async ({ to, name, token }) => {
       </div>
     `,
   });
-  if (error) {
-    console.error(`Failed to send reset email to ${to}:`, error);
-    throw new Error('Failed to send password reset email');
-  }
 };
 
 export const sendWelcomeEmail = async ({ to, name }) => {
   const dashboardUrl = `${config.frontendUrl}/dashboard`;
-  const { error } = await resend.emails.send({
-    from: config.resendFrom,
+  await sendMail({
     to,
     subject: 'Welcome to BrainwaveAI 🎉',
     html: `
@@ -131,8 +119,4 @@ export const sendWelcomeEmail = async ({ to, name }) => {
       </div>
     `,
   });
-  if (error) {
-    console.error(`Failed to send welcome email to ${to}:`, error);
-    throw new Error('Failed to send welcome email');
-  }
 };
