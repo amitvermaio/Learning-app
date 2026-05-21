@@ -70,7 +70,7 @@ export const register = async (req, res, next) => {
 
     await redis.set(redisKeys.cooldown(email), '1', { ex: RESEND_COOLDOWN_SEC });
 
-    sendVerificationOtpEmail({ to: email, name, otp })
+    await sendVerificationOtpEmail({ to: email, name, otp })
       .catch(err => console.error('OTP email failed:', err));
 
     res.status(201).json(
@@ -244,7 +244,7 @@ export const forgotPassword = async (req, res, next) => {
       { ex: 60 * 60 }
     );
 
-    sendResetPasswordEmail({ to: user.email, name: user.name, token: resetToken })
+    await sendResetPasswordEmail({ to: user.email, name: user.name, token: resetToken })
       .catch(err => console.error('Reset email failed:', err));
 
     res.status(200).json(
