@@ -70,7 +70,7 @@ export const register = async (req, res, next) => {
 
     await redis.set(redisKeys.cooldown(email), '1', { ex: RESEND_COOLDOWN_SEC });
 
-    await sendVerificationOtpEmail({ to: email, name, otp })
+    sendVerificationOtpEmail({ to: email, name, otp })
       .catch(err => console.error('OTP email failed:', err));
 
     res.status(201).json(
@@ -169,7 +169,7 @@ export const resendRegistrationOtp = async (req, res, next) => {
     await redis.del(redisKeys.attempts(email));
     await redis.set(redisKeys.cooldown(email), '1', { ex: RESEND_COOLDOWN_SEC });
 
-    await sendVerificationOtpEmail({ to: email, name: pending.name, otp });
+    sendVerificationOtpEmail({ to: email, name: pending.name, otp });
 
     res.status(200).json(
       new ApiResponse(200, { email }, 'A new OTP has been sent to your email.')
@@ -244,7 +244,7 @@ export const forgotPassword = async (req, res, next) => {
       { ex: 60 * 60 }
     );
 
-    await sendResetPasswordEmail({ to: user.email, name: user.name, token: resetToken })
+    sendResetPasswordEmail({ to: user.email, name: user.name, token: resetToken })
       .catch(err => console.error('Reset email failed:', err));
 
     res.status(200).json(
