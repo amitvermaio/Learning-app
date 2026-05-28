@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Document from '../models/document.model.js';
 import Flashcard from '../models/flashcard.model.js';
 import Quiz from '../models/quiz.model.js';
@@ -28,8 +29,8 @@ export const getDashboard = async (req, res, next) => {
     const averageScore = quizzes.length > 0 ? Math.round(quizzes.reduce((acc, q) => acc + q.score, 0) / quizzes.length) : 0;
 
     // Recent Activity
-    const recentDocument = await Document.find({user: userId})
-      .sort({lastAccessed: -1})
+    const recentDocument = await Document.find({ user: userId })
+      .sort({ lastAccessed: -1 })
       .limit(5)
       .select('title fileName lastAccessed status');
 
@@ -44,9 +45,9 @@ export const getDashboard = async (req, res, next) => {
       .populate('document', 'title')
       .select('title score totalQuestions completedAt');
 
-      const studyStreak = Math.floor(Math.random() * 7) + 1;
+    const studyStreak = Math.floor(Math.random() * 7) + 1;
 
-      res.status(200).json(
+    res.status(200).json(
       new ApiResponse(
         200,
         {
@@ -74,3 +75,53 @@ export const getDashboard = async (req, res, next) => {
   }
 }
 
+export const getDocumentTypes = async (req, res, next) => {
+  try {
+    const documentCounts = await Document.aggregate([
+      {
+        $match: {
+          user: new mongoose.Types.ObjectId(req.user.id)
+        }
+      },
+      {
+        $group: {
+          _id: "$mimeType",
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          mimeType: "$_id",
+          count: 1,
+          _id: 0
+        }
+      }
+    ]);
+
+    res.status(200).json(new ApiResponse(200, documentCounts, "Document Types Count fetched Successfully"));
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export const getQuizPerformance = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    const quizzes = await Quiz.find(
+      { user: userId },
+      { title: 1, score: 1, totalQuestions: 1, _id: 1 }
+    ).sort({ createdAt: 1 });
+
+    const data = quizzes.map((quiz, index) => ({
+      name: `Quiz ${index + 1}`,   
+      score: quiz.score,
+      totalQuestions: quiz.totalQuestions
+    }));
+
+    res.status(200).json(new ApiResponse(200, data, "Quiz data fetched successfully"));
+  } catch (error) {
+    next(error);
+  }
+}
