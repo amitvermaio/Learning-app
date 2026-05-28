@@ -7,7 +7,11 @@ import UnauthWrapper from './components/auth/UnauthWrapper';
 
 import { asyncloaduser } from './store/actions/authActions';
 import { asyncgetdocuments } from './store/actions/documentActions';
-import { asyncgetdashboard } from './store/actions/progressActions';
+import {
+  asyncgetdashboard,
+  asyncfetchquizperformance,
+  asyncfetchdocumenttypes
+} from './store/actions/progressActions';
 
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/auth/Login'));
@@ -38,6 +42,8 @@ const App = () => {
   const { isAuthenticated, status: authStatus } = useSelector((state) => state.auth);
   const documentsStatus = useSelector((state) => state.document.status);
   const progressStatus = useSelector((state) => state.progress.status);
+  const quizPerformanceStatus = useSelector((state) => state.progress.quizPerformanceStatus);
+  const documentTypesStatus = useSelector((state) => state.progress.documentTypesStatus);
 
   React.useEffect(() => {
     const token = localStorage.getItem('token');
@@ -51,6 +57,18 @@ const App = () => {
       dispatch(asyncgetdashboard());
     }
   }, [dispatch, isAuthenticated, authStatus, progressStatus]);
+
+  React.useEffect(() => {
+    if (isAuthenticated && authStatus === 'succeeded' && quizPerformanceStatus === 'idle') {
+      dispatch(asyncfetchquizperformance());
+    }
+  }, [dispatch, isAuthenticated, authStatus, quizPerformanceStatus]);
+
+  React.useEffect(() => {
+    if (isAuthenticated && authStatus === 'succeeded' && documentTypesStatus === 'idle') {
+      dispatch(asyncfetchdocumenttypes());
+    }
+  }, [dispatch, isAuthenticated, authStatus, documentTypesStatus]);
 
   React.useEffect(() => {
     if (isAuthenticated && authStatus === 'succeeded' && documentsStatus === 'idle') {

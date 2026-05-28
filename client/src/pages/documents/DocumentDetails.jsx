@@ -32,12 +32,24 @@ const DocumentDetails = () => {
       return <div className='text-center p-8'>No document found.</div>;
     }
 
+    const isPdf = document.mimeType === 'application/pdf';
+    const isOfficeDoc = [
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    ].includes(document.mimeType);
+
+    const viewerUrl = isOfficeDoc
+      ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(document.fileUrl)}`
+      : document.fileUrl;
+
     return (
       <div className='bg-white border border-gray-300 rounded-lg overflow-hidden shadow-sm'>
         <div className='flex items-center justify-between p-4 border-b border-gray-300 bg-gray-50'>
           <span className='font-medium text-sm text-gray-700'>Document Viewer</span>
           <a
-            href={document.fileUrl}
+            href={isOfficeDoc ? viewerUrl : document.fileUrl}
             target='_blank'
             rel='noopener noreferrer'
             className='inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors'
@@ -47,16 +59,21 @@ const DocumentDetails = () => {
           </a>
         </div>
         <div className='bg-gray-100 p-1'>
-          <iframe
-            src={document.fileUrl}
-            frameBorder="0"
-            className='w-full h-[70vh] bg-white rounded border border-gray-300'
-            title='Document Viewer'
-            style={{
-              colorScheme: 'light',
-            }}
-          >
-          </iframe>
+          {isPdf || isOfficeDoc ? (
+            <iframe
+              src={viewerUrl}
+              frameBorder="0"
+              className='w-full h-[70vh] bg-white rounded border border-gray-300'
+              title='Document Viewer'
+              style={{
+                colorScheme: 'light',
+              }}
+            />
+          ) : (
+            <div className='h-[70vh] flex items-center justify-center text-sm text-gray-600'>
+              This file type can’t be previewed here. Use “Open in new tab” to view or download.
+            </div>
+          )}
         </div>
       </div>
     )

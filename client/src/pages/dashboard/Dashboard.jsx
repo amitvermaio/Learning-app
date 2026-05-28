@@ -3,9 +3,11 @@ import Spinner from '../../components/common/Spinner';
 import { FileText, BookOpen, BrainCircuit, TrendingUp, Clock } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
+import QuizPerformanceBarPlot from '../../components/dashboard/QuizPerformanceBarPlot';
+import DocumentsTypePieChart from '../../components/dashboard/DocumentsTypePieChart';
 
 const Dashboard = () => {
-  const { dashboard, loading } = useSelector((state) => state.progress);
+  const { dashboard, loading, quizPerformance, documentTypes } = useSelector((state) => state.progress);
 
   if (loading) return <Spinner />
 
@@ -69,10 +71,10 @@ const Dashboard = () => {
   return (
     <div className='min-h-screen relative'>
 
-      {/* ✅ Background Pattern (FIXED) */}
+      {/* Background Pattern */}
       <div className='absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] bg-[length:16px_16px] opacity-30 pointer-events-none'></div>
 
-      {/* ✅ Main Content */}
+      {/* Main Content */}
       <div className='relative max-w-7xl mx-auto p-6'>
 
         {/* Header */}
@@ -101,6 +103,11 @@ const Dashboard = () => {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
+          <QuizPerformanceBarPlot data={quizPerformance} />
+          <DocumentsTypePieChart data={documentTypes} />
         </div>
 
         {/* Recent Activity */}
