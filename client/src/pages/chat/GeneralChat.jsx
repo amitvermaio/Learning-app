@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, Check, CheckCircle2, Copy, Send, Sparkles } from 'lucide-react';
+import { Bot, Check, CheckCircle2, Copy, Send, ChevronDown, ChevronUp, Link as LinkIcon } from 'lucide-react';
 import MarkdownRenderer from '../../components/common/MarkdownRenderer';
+import MessageSources from '../../components/chat/MessageSources';
 import api from '../../config/axiosconfig';
 
 const MODEL_UI = {
@@ -14,7 +15,7 @@ const MODEL_UI = {
     logoPlate: 'bg-white ring-slate-300',
   },
   fast: {
-    name: 'GPT-OSS 120B',
+    name: 'ChatGPT',
     provider: 'OpenAI',
     bestFor: 'Fast responses for quick tasks',
     accent: 'from-sky-500 to-cyan-500',
@@ -47,17 +48,18 @@ const toDisplayModel = ({ modelType, modelId }) => {
 
 const GeneralChat = () => {
   const [models, setModels] = useState(FALLBACK_MODELS.map(toDisplayModel));
-  const [selectedModelId, setSelectedModelId] = useState(FALLBACK_MODELS[0].modelType);
+  const [selectedModelId, setSelectedModelId] = useState('fast');
   const [input, setInput] = useState('');
   const [isResponding, setIsResponding] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState('');
+  const [expandedSources, setExpandedSources] = useState({});
   const messagesEndRef = useRef(null);
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
       content:
-        'Welcome to General Chat. Select any open-source model and ask questions not tied to documents. I can answer in markdown, structured lists, and concise explanations.',
-      modelType: 'normal',
+        'Welcome back. Ask anything and I will respond with clear, structured answers and citations when available.',
+      modelType: 'fast',
       createdAt: new Date().toISOString(),
     },
   ]);
@@ -73,7 +75,11 @@ const GeneralChat = () => {
         const { data } = await api.get('/ai/models');
         const modelList = (data?.data?.models || FALLBACK_MODELS).map(toDisplayModel);
         setModels(modelList);
-        setSelectedModelId((prev) => prev || modelList[0]?.id || 'normal');
+        setSelectedModelId((prev) => {
+          if (prev) return prev;
+          if (modelList.some((model) => model.id === 'fast')) return 'fast';
+          return modelList[0]?.id || 'fast';
+        });
       } catch {
         setModels(FALLBACK_MODELS.map(toDisplayModel));
       }
@@ -98,6 +104,13 @@ const GeneralChat = () => {
     }
   };
 
+  const toggleSources = (messageId) => {
+    setExpandedSources((prev) => ({
+      ...prev,
+      [messageId]: !prev[messageId],
+    }));
+  };
+
   const sendMessage = async (questionText) => {
     const cleaned = questionText.trim();
     if (!cleaned || isResponding || !selectedModel) return;
@@ -119,10 +132,12 @@ const GeneralChat = () => {
         modelType: selectedModel.modelType,
       });
 
-      const responseText = data?.data?.response || 'Sorry, I could not generate a response.';
+      const responseText = data?.data?.reply || data?.data?.response || 'Sorry, I could not generate a response.';
+      const responseSources = Array.isArray(data?.data?.sources) ? data.data.sources : [];
       const assistantMessage = {
         role: 'assistant',
         content: responseText,
+        sources: responseSources,
         modelType: selectedModel.modelType,
         createdAt: new Date().toISOString(),
       };
@@ -152,13 +167,9 @@ const GeneralChat = () => {
       <div className='pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] bg-size-[18px_18px]' />
 
       <div className='relative mx-auto flex h-full max-w-7xl min-h-0 flex-col'>
-        <section className='flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 shadow-xl shadow-slate-300/25 backdrop-blur-xl'>
+        <section className='flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 shadow-2xl shadow-slate-300/30 backdrop-blur-xl'>
           <div className='border-b border-slate-200/90 bg-white px-4 py-3 sm:px-5'>
-            <div className='mb-2 flex items-center justify-between'>
-              <p className='inline-flex items-center gap-2 rounded-full border border-teal-100 bg-linear-to-r from-teal-50 to-cyan-50 px-3 py-1 text-[11px] font-semibold text-teal-700'>
-                <Sparkles className='h-3.5 w-3.5' />
-                General AI Chat
-              </p>
+            <div className='mb-2 flex items-center justify-end'>
               <span className='rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600'>
                 Live API Mode
               </span>
@@ -222,13 +233,15 @@ const GeneralChat = () => {
             </div>
           </div>
 
-          <div className='min-h-0 flex-1 overflow-y-auto bg-linear-to-b from-slate-50/70 via-white to-slate-50/30 px-4 py-5 sm:px-6'>
+          <div className='min-h-0 flex-1 overflow-y-auto bg-linear-to-b from-slate-50/70 via-white to-slate-50/20 px-4 py-6 sm:px-6'>
             <div className='mx-auto flex max-w-4xl flex-col gap-4'>
                 {messages.map((messageItem, index) => {
                   const isUser = messageItem.role === 'user';
                   const itemModel = models.find((model) => model.modelType === messageItem.modelType) || selectedModel || models[0];
                   const messageId = `${messageItem.createdAt}-${index}`;
                   const copied = copiedMessageId === messageId;
+                  const sources = Array.isArray(messageItem.sources) ? messageItem.sources : [];
+                  const isSourcesExpanded = !!expandedSources[messageId];
                   return (
                     <article
                       key={messageId}
@@ -240,9 +253,9 @@ const GeneralChat = () => {
                         </div>
                       )}
 
-                      <div className={`flex max-w-[85%] flex-col ${isUser ? 'items-end' : 'items-start'} sm:max-w-[75%]`}>
+                      <div className={`flex w-full max-w-[92%] flex-col ${isUser ? 'items-end' : 'items-start'} sm:max-w-[85%] lg:max-w-[75%]`}>
                         <div
-                          className={`max-w-lg rounded-2xl p-4 text-sm leading-relaxed shadow-sm ${
+                          className={`w-full rounded-2xl p-4 text-sm leading-relaxed shadow-sm ${
                             isUser
                               ? 'bg-linear-to-br from-emerald-500 to-teal-500 text-white rounded-br-md'
                               : 'bg-white border border-slate-200/60 text-slate-800 rounded-bl-md'
@@ -256,18 +269,37 @@ const GeneralChat = () => {
                             </div>
                           )}
                         </div>
-                        <button
-                          type='button'
-                          onClick={() => copyMessage(messageId, messageItem.content)}
-                          className={`mt-1 inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors ${
-                            isUser
-                              ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-                              : 'border-slate-200 text-slate-600 hover:bg-slate-100'
-                          }`}
-                        >
-                          {copied ? <Check className='h-3.5 w-3.5' /> : <Copy className='h-3.5 w-3.5' />}
-                          {copied ? 'Copied' : 'Copy'}
-                        </button>
+                        <div className='mt-2 flex flex-wrap items-center gap-2'>
+                          <button
+                            type='button'
+                            onClick={() => copyMessage(messageId, messageItem.content)}
+                            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors ${
+                              isUser
+                                ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                                : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                            }`}
+                          >
+                            {copied ? <Check className='h-3.5 w-3.5' /> : <Copy className='h-3.5 w-3.5' />}
+                            {copied ? 'Copied' : 'Copy'}
+                          </button>
+                          {!isUser && sources.length > 0 && (
+                            <button
+                              type='button'
+                              onClick={() => toggleSources(messageId)}
+                              className='inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50/60 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100'
+                            >
+                              <LinkIcon className='h-3.5 w-3.5' />
+                              Sources ({sources.length})
+                              {isSourcesExpanded ? <ChevronUp className='h-3.5 w-3.5' /> : <ChevronDown className='h-3.5 w-3.5' />}
+                            </button>
+                          )}
+                        </div>
+                        {!isUser && sources.length > 0 && (
+                          <MessageSources
+                            sources={sources}
+                            isExpanded={isSourcesExpanded}
+                          />
+                        )}
                       </div>
                     </article>
                   );

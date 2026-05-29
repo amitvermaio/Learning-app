@@ -353,11 +353,14 @@ export const generateResponse = async (req, res, next) => {
   const { query, modelType } = req.body;
 
   try {
-    const response = await generateResponseFromModel(query, modelType);
+    const { reply, sources } = await generateResponseFromModel(query, modelType);
 
     res.status(200).json(new ApiResponse(
       200,
-      { response },
+      { 
+        reply,
+        sources  
+      },
       'Response generated successfully'
     ));
   } catch (error) {
