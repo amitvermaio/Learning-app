@@ -75,7 +75,7 @@ const Dashboard = () => {
       <div className='absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] bg-[length:16px_16px] opacity-30 pointer-events-none'></div>
 
       {/* Main Content */}
-      <div className='relative max-w-7xl mx-auto p-6'>
+      <div className='relative max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8'>
 
         {/* Header */}
         <div className='mb-6'>

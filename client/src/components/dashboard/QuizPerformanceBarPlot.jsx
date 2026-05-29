@@ -13,14 +13,14 @@ const QuizPerformanceBarPlot = ({ data }) => {
   const chartData = (data || []).map((item, index) => ({
     name: item.name || `Quiz ${index + 1}`,
     score: Number(item.score) || 0,
-    totalQuestions: Number(item.totalQuestions) || 0,
+    totalScore: Number(item.totalScore) || 100,
   }));
 
   return (
     <div className='bg-white/80 backdrop-blur-xl border border-slate-200/70 rounded-2xl shadow-slate-200/50 p-6'>
       <div className='mb-4'>
         <h3 className='text-lg font-medium text-slate-900 tracking-tight'>Quiz Performance</h3>
-        <p className='text-xs text-slate-500'>Score vs. total questions by quiz</p>
+        <p className='text-xs text-slate-500'>Scored marks vs. total marks by quiz</p>
       </div>
 
       {chartData.length === 0 ? (
@@ -39,8 +39,8 @@ const QuizPerformanceBarPlot = ({ data }) => {
                 contentStyle={{ borderRadius: 12, borderColor: '#e2e8f0', fontSize: 12 }}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey='score' name='Score' fill='#10b981' radius={[6, 6, 0, 0]} />
-              <Bar dataKey='totalQuestions' name='Total Questions' fill='#94a3b8' radius={[6, 6, 0, 0]} />
+              <Bar dataKey='score' name='Scored Marks' fill='#10b981' radius={[6, 6, 0, 0]} />
+              <Bar dataKey='totalScore' name='Total Marks' fill='#94a3b8' radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

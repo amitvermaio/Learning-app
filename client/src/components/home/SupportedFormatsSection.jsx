@@ -1,23 +1,23 @@
 import { useRef, useEffect, useState } from 'react';
-import { FileText, MonitorPlay, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 const formats = [
   {
-    icon: FileText,
+    iconSrc: '/pdf.svg',
     name: 'PDF',
     description: 'Portable Document Format. Must have a selectable text layer — not a scanned image.',
     extensions: ['.pdf'],
     color: 'red',
   },
   {
-    icon: FileText,
+    iconSrc: '/Microsoft_Office_Word.svg',
     name: 'Word Document',
     description: 'Microsoft Word files in both legacy and modern formats.',
     extensions: ['.doc', '.docx'],
     color: 'blue',
   },
   {
-    icon: MonitorPlay,
+    iconSrc: '/Microsoft_Office_PowerPoint.svg',
     name: 'PowerPoint',
     description: 'Presentation slides. All text content across slides is extracted and processed.',
     extensions: ['.ppt', '.pptx'],
@@ -31,7 +31,7 @@ const colorMap = {
   amber: { bg: 'bg-amber-50', icon: 'text-amber-500', badge: 'bg-amber-50 text-amber-700 border border-amber-200' },
 };
 
-const FormatCard = ({ icon: Icon, name, description, extensions, color, index }) => {
+const FormatCard = ({ iconSrc, name, description, extensions, color, index }) => {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
   const c = colorMap[color];
@@ -53,7 +53,7 @@ const FormatCard = ({ icon: Icon, name, description, extensions, color, index })
     >
       <div className='group bg-white border border-slate-200 hover:border-slate-300 rounded-2xl p-6 transition-all duration-300 hover:shadow-lg h-full flex flex-col gap-4'>
         <div className={`w-11 h-11 rounded-xl ${c.bg} flex items-center justify-center`}>
-          <Icon className={`w-5 h-5 ${c.icon}`} strokeWidth={2} />
+          <img src={iconSrc} alt={`${name} icon`} className='w-5 h-5' />
         </div>
         <div className='flex-1'>
           <h3 className='text-base font-bold text-slate-900 mb-1.5'>{name}</h3>

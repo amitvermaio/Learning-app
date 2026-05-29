@@ -115,9 +115,10 @@ export const getQuizPerformance = async (req, res, next) => {
     ).sort({ createdAt: 1 });
 
     const data = quizzes.map((quiz, index) => ({
-      name: `Quiz ${index + 1}`,   
-      score: quiz.score,
-      totalQuestions: quiz.totalQuestions
+      name: quiz.title || `Quiz ${index + 1}`,
+      score: Number(quiz.score) || 0,
+      totalScore: 100,
+      totalQuestions: Number(quiz.totalQuestions) || 0,
     }));
 
     res.status(200).json(new ApiResponse(200, data, "Quiz data fetched successfully"));
