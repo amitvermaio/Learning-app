@@ -18,6 +18,23 @@ const formatFileSize = (bytes) => {
   return `${size.toFixed(1)} ${units[unitIndex]}`;
 };
 
+const FILE_TYPE_ICONS = {
+  'application/pdf': { src: '/pdf.svg', alt: 'PDF file' },
+  'application/msword': { src: '/Microsoft_Office_Word.svg', alt: 'Word file' },
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
+    src: '/Microsoft_Office_Word.svg',
+    alt: 'Word file',
+  },
+  'application/vnd.ms-powerpoint': {
+    src: '/Microsoft_Office_PowerPoint.svg',
+    alt: 'PowerPoint file',
+  },
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': {
+    src: '/Microsoft_Office_PowerPoint.svg',
+    alt: 'PowerPoint file',
+  },
+};
+
 const DocumentCard = ({ document, onDelete }) => {
   const navigate = useNavigate();
 
@@ -32,6 +49,8 @@ const DocumentCard = ({ document, onDelete }) => {
     e.stopPropagation();
     onDelete(document);
   };
+
+  const fileIcon = document?.mimeType ? FILE_TYPE_ICONS[document.mimeType] : null;
 
   return (
     <div
@@ -63,6 +82,15 @@ const DocumentCard = ({ document, onDelete }) => {
 
         {/* File Size */}
         <div className='flex items-center gap-3 text-xs text-slate-500 mb-3'>
+          {fileIcon && (
+            <span className='inline-flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 border border-slate-200'>
+              <img
+                src={fileIcon.src}
+                alt={fileIcon.alt}
+                className='w-4 h-4 object-contain'
+              />
+            </span>
+          )}
           {document.fileSize !== undefined && (
             <span className='font-medium'>
               {formatFileSize(document.fileSize)}

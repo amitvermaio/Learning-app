@@ -17,11 +17,11 @@ const ALLOWED_MIME_TYPES = [
 ];
 
 const ALLOWED_FORMATS = [
-  { label: 'PDF', ext: '.pdf' },
-  { label: 'DOC', ext: '.doc' },
-  { label: 'DOCX', ext: '.docx' },
-  { label: 'PPT', ext: '.ppt' },
-  { label: 'PPTX', ext: '.pptx' },
+  { label: 'PDF', ext: '.pdf', icon: '/pdf.svg', alt: 'PDF file' },
+  { label: 'DOC', ext: '.doc', icon: '/Microsoft_Office_Word.svg', alt: 'Word file' },
+  { label: 'DOCX', ext: '.docx', icon: '/Microsoft_Office_Word.svg', alt: 'Word file' },
+  { label: 'PPT', ext: '.ppt', icon: '/Microsoft_Office_PowerPoint.svg', alt: 'PowerPoint file' },
+  { label: 'PPTX', ext: '.pptx', icon: '/Microsoft_Office_PowerPoint.svg', alt: 'PowerPoint file' },
 ];
 
 const DocumentList = () => {
@@ -208,7 +208,15 @@ const DocumentList = () => {
                     key={format.ext}
                     className='inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700'
                   >
-                    <FileText className='w-3.5 h-3.5 text-slate-500' />
+                    {format.icon ? (
+                      <img
+                        src={format.icon}
+                        alt={format.alt}
+                        className='w-3.5 h-3.5 object-contain'
+                      />
+                    ) : (
+                      <FileText className='w-3.5 h-3.5 text-slate-500' />
+                    )}
                     {format.label}
                     <span className='text-slate-500 font-medium'>{format.ext}</span>
                   </span>

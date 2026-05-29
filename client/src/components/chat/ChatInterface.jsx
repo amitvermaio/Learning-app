@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Send, MessageSquare, Copy, Check } from 'lucide-react';
+import { Send, MessageSquare, Copy, Check, ChevronDown, ChevronUp, Link as LinkIcon } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { toast } from 'sonner';
 import api from '../../config/axiosconfig';
 import MarkdownRenderer from '../common/MarkdownRenderer';
+import MessageSources from './MessageSources';
 import Spinner from '../common/Spinner';
 
 const ChatInterface = () => {
@@ -16,6 +17,7 @@ const ChatInterface = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [copiedMessageId, setCopiedMessageId] = useState('');
+  const [expandedSources, setExpandedSources] = useState({});
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -55,6 +57,13 @@ const ChatInterface = () => {
     }
   };
 
+  const toggleSources = (messageId) => {
+    setExpandedSources((prev) => ({
+      ...prev,
+      [messageId]: !prev[messageId],
+    }));
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!message.trim()) return;
@@ -76,7 +85,8 @@ const ChatInterface = () => {
       });
       const assistantMessage = {
         role: 'assistant',
-        content: data?.data?.answer || data?.answer || '...',
+        content: data?.data?.answer || data?.data?.reply || data?.answer || data?.reply || '...',
+        sources: Array.isArray(data?.data?.sources) ? data.data.sources : Array.isArray(data?.sources) ? data.sources : [],
         timestamp: new Date().toISOString(),
       };
       setChatHistory((prev) => [...prev, assistantMessage]);
@@ -92,6 +102,8 @@ const ChatInterface = () => {
     const isUser = msg.role === 'user';
     const messageId = `${msg.timestamp || 'msg'}-${index}`;
     const copied = copiedMessageId === messageId;
+    const sources = Array.isArray(msg.sources) ? msg.sources : [];
+    const isSourcesExpanded = !!expandedSources[messageId];
     return (
       <div key={index} className={`flex items-start gap-3 my-4 ${isUser ? 'justify-end' : ''}`}>
         {!isUser && (
@@ -99,7 +111,7 @@ const ChatInterface = () => {
             <img src='/gemini-color.svg' alt='Gemini logo' className='w-4 h-4 object-contain' />
           </div>
         )}
-        <div className={`max-w-lg ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
+        <div className={`max-w-lg w-full ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
           <div className={`w-full p-4 rounded-2xl shadow-sm ${isUser
             ? 'bg-linear-to-br from-emerald-500 to-teal-500 text-white rounded-br-md'
             : 'bg-white border border-slate-200/60 text-slate-800 rounded-bl-md'
@@ -112,18 +124,37 @@ const ChatInterface = () => {
               </div>
             )}
           </div>
-          <button
-            type='button'
-            onClick={() => copyMessage(messageId, msg.content)}
-            className={`mt-1 inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors ${
-              isUser
-                ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
-                : 'border-slate-200 text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            {copied ? <Check className='h-3.5 w-3.5' /> : <Copy className='h-3.5 w-3.5' />}
-            {copied ? 'Copied' : 'Copy'}
-          </button>
+          <div className='mt-2 flex flex-wrap items-center gap-2'>
+            <button
+              type='button'
+              onClick={() => copyMessage(messageId, msg.content)}
+              className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors ${
+                isUser
+                  ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                  : 'border-slate-200 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {copied ? <Check className='h-3.5 w-3.5' /> : <Copy className='h-3.5 w-3.5' />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+            {!isUser && sources.length > 0 && (
+              <button
+                type='button'
+                onClick={() => toggleSources(messageId)}
+                className='inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50/60 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-100'
+              >
+                <LinkIcon className='h-3.5 w-3.5' />
+                Sources ({sources.length})
+                {isSourcesExpanded ? <ChevronUp className='h-3.5 w-3.5' /> : <ChevronDown className='h-3.5 w-3.5' />}
+              </button>
+            )}
+          </div>
+          {!isUser && sources.length > 0 && (
+            <MessageSources
+              sources={sources}
+              isExpanded={isSourcesExpanded}
+            />
+          )}
         </div>
         {isUser && (
           <div className='w-9 h-9 rounded-xl bg-linear-to-br from-slate-200 to-slate-300 flex items-center justify-center text-slate-700 font-semibold text-sm shrink-0 shadow-sm'>
